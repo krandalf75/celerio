@@ -19,12 +19,17 @@ package com.jaxio.celerio.configuration;
 import com.jaxio.celerio.configuration.entity.EntityConfig;
 import com.jaxio.celerio.configuration.entity.EnumConfig;
 
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementWrapper;
+import javax.xml.bind.annotation.XmlRootElement;
+
 import java.util.List;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static com.jaxio.celerio.configuration.Util.firstNonNull;
 import static com.jaxio.celerio.configuration.Util.nonNull;
 
+@XmlRootElement(name = "celerio", namespace = "http://www.jaxio.com/schema/celerio")
 public class Celerio {
     private List<Include> includes = newArrayList();
     private Configuration configuration = new Configuration();
@@ -60,6 +65,8 @@ public class Celerio {
     /*
      * Configure the generated entities.
      */
+    @XmlElementWrapper(name = "entityConfigs")
+    @XmlElement(name = "entityConfig")
     public List<EntityConfig> getEntityConfigs() {
         return entityConfigs;
     }
@@ -98,6 +105,8 @@ public class Celerio {
     /*
      * Configure enums that will be used in multiple entities, and referenced by their name in ColumnConfig
      */
+    @XmlElementWrapper(name = "sharedEnumConfigs")
+    @XmlElement(name = "enumConfig")
     public List<EnumConfig> getSharedEnumConfigs() {
         return sharedEnumConfigs;
     }

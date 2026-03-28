@@ -19,13 +19,27 @@ package com.jaxio.celerio.configuration.pack;
 import com.jaxio.celerio.configuration.CelerioTemplateContext;
 import lombok.Data;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+
 @Data
+@XmlRootElement(name = "celerioPack", namespace = "http://www.jaxio.com/schema/celerio")
+@XmlAccessorType(XmlAccessType.FIELD)
 public class CelerioPack {
+    @XmlElement(name = "packName")
     private Value packName;
+    @XmlElement(name = "packDescription")
     private Value packDescription;
+    @XmlElement(name = "packDescription2")
     private Value packDescription2;
+    @XmlElement(name = "packCommand")
     private Value packCommand;
+    @XmlElement(name = "packCommandHelp")
     private Value packCommandHelp;
+    @XmlElement(name = "projectLink")
     private Value projectLink;
+    @XmlElement(name = "celerioTemplateContext")
     private CelerioTemplateContext celerioTemplateContext;
 }

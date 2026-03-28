@@ -22,12 +22,15 @@ import com.jaxio.celerio.convention.WellKnownFolder;
 import com.jaxio.celerio.model.Project;
 import com.jaxio.celerio.output.OutputResult;
 import com.thoughtworks.xstream.XStream;
+import com.thoughtworks.xstream.security.AnyTypePermission;
 import lombok.Data;
 import org.springframework.stereotype.Service;
 
 @Data
 @Service
 public class Config {
+    private static final XStream XSTREAM = createXStream();
+
     private OutputResult outputResult;
     private Project project = new Project();
     private Celerio celerio = new Celerio();
@@ -57,8 +60,13 @@ public class Config {
     }
 
     private Metadata deepCopy(Metadata metadata) {
-        XStream XSTREAM = new XStream();
         return (Metadata) XSTREAM.fromXML(XSTREAM.toXML(metadata));
+    }
+
+    private static XStream createXStream() {
+        XStream xstream = new XStream();
+        xstream.addPermission(AnyTypePermission.ANY);
+        return xstream;
     }
 
     public void setSpringfuseMode(boolean springfuseMode) {

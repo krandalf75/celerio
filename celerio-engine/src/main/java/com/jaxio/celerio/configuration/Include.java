@@ -18,6 +18,8 @@ package com.jaxio.celerio.configuration;
 
 import lombok.Setter;
 
+import javax.xml.bind.annotation.XmlAttribute;
+
 /**
  * Include a configuration file dedicated to entityConfigs. Use it on large project to split your entityConfigs configuration into smaller pieces.
  */
@@ -29,6 +31,7 @@ public class Include {
      * The path to a configuration file whose entityConfigs tag will be loaded. The path must be relative to the folder containing the main configuration file.
      * Beware, only the entityConfigs tag will be loaded from this file. For example: includes/ref/country.xml
      */
+    @XmlAttribute(name = "filename")
     public String getFilename() {
         return filename;
     }

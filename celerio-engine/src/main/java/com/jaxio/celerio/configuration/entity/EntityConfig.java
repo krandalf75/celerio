@@ -25,6 +25,8 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.persistence.InheritanceType;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlTransient;
 import java.util.List;
 import java.util.Map;
 
@@ -121,6 +123,7 @@ public class EntityConfig implements CacheConfigGetter {
      * By default, the entity name is deduced from the table name. <br>
      * For example: 'bank_account' will become 'BankAccount';
      */
+    @XmlAttribute(name = "entityName")
     public String getEntityName() {
         return entityName;
     }
@@ -152,6 +155,7 @@ public class EntityConfig implements CacheConfigGetter {
     /*
      * The underlying table name for the entity. If not set, inheritance must be configured.
      */
+    @XmlAttribute(name = "tableName")
     public String getTableName() {
         return tableName;
     }
@@ -373,6 +377,7 @@ public class EntityConfig implements CacheConfigGetter {
         this.customAnnotations = nonNull(customAnnotations);
     }
 
+    @XmlTransient
     public Map<String, ColumnConfig> getColumnConfigByColumnName() {
         return columnConfigByColumnName;
     }

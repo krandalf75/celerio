@@ -22,6 +22,9 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.util.StringUtils;
 
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementWrapper;
+
 import java.util.List;
 
 import static com.google.common.collect.Lists.newArrayList;
@@ -84,6 +87,8 @@ public class Configuration {
     /*
      * List of template packs to execute during the generation. Defaults to the template packs found in the classpath.
      */
+    @XmlElementWrapper(name = "packs")
+    @XmlElement(name = "pack")
     public List<Pack> getPacks() {
         return packs;
     }
@@ -222,6 +227,8 @@ public class Configuration {
     /*
      * Filter the tables you want to be generated
      */
+    @XmlElementWrapper(name = "tables")
+    @XmlElement(name = "table")
     public List<Pattern> getTables() {
         return tables;
     }

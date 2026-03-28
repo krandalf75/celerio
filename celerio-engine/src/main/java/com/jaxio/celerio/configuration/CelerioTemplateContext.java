@@ -18,12 +18,23 @@ package com.jaxio.celerio.configuration;
 
 import lombok.Data;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementWrapper;
+
 import java.util.List;
 
 import static com.google.common.collect.Lists.newArrayList;
 
 @Data
+@XmlAccessorType(XmlAccessType.FIELD)
 public class CelerioTemplateContext {
+    @XmlElementWrapper(name = "properties")
+    @XmlElement(name = "property")
     List<MetaAttribute> properties = newArrayList();
+
+    @XmlElementWrapper(name = "entityContextProperties")
+    @XmlElement(name = "entityContextProperty")
     List<EntityContextProperty> entityContextProperties = newArrayList();
 }

@@ -17,8 +17,9 @@
 package com.jaxio.celerio.configuration.support;
 
 import org.apache.commons.io.output.ByteArrayOutputStream;
+import org.springframework.oxm.Marshaller;
+import org.springframework.oxm.Unmarshaller;
 import org.springframework.oxm.XmlMappingException;
-import org.springframework.oxm.jibx.JibxMarshaller;
 
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
@@ -26,7 +27,9 @@ import java.io.*;
 
 public abstract class AbstractJibxLoader<T> {
 
-    public abstract JibxMarshaller getMarshaller();
+    public abstract Marshaller getMarshaller();
+
+    public abstract Unmarshaller getUnmarshaller();
 
     public T load(String filename) throws XmlMappingException, IOException {
         return load(new File(filename));
@@ -38,7 +41,7 @@ public abstract class AbstractJibxLoader<T> {
 
     @SuppressWarnings("unchecked")
     public T load(InputStream inputStream) throws XmlMappingException, IOException {
-        return (T) getMarshaller().unmarshal(new StreamSource(inputStream));
+        return (T) getUnmarshaller().unmarshal(new StreamSource(inputStream));
     }
 
     public void write(T object, String filename) throws XmlMappingException, IOException {
