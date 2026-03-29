@@ -22,12 +22,16 @@ import repackaged.org.hibernate.search.annotations.Norms;
 import repackaged.org.hibernate.search.annotations.Store;
 import repackaged.org.hibernate.search.annotations.TermVector;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+
 import static org.springframework.util.StringUtils.hasLength;
 
 /*
  * Allows you to configure Hibernate Search Field annotation.
  */
 @Data
+@XmlAccessorType(XmlAccessType.FIELD)
 public class IndexedField {
     public String name;
     public Store store;

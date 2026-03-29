@@ -8,11 +8,33 @@ Celerio is a code generator tool for data-driven application. It can reverse a d
 
 ## How to use it ?
 
-Have already Maven 3.1.1 or above and Java 1.8 installed ?
+Have Java 25 and Maven 3.9.9 (or use the Maven Wrapper) installed?
 
 Simply execute:
 
-    mvn com.jaxio.celerio:bootstrap-maven-plugin:bootstrap
+    ./mvnw com.jaxio.celerio:bootstrap-maven-plugin:bootstrap
+
+On Windows:
+
+    mvnw.cmd com.jaxio.celerio:bootstrap-maven-plugin:bootstrap
+
+## Build notes
+
+The legacy JiBX code generation steps are now disabled by default for modern JDK compatibility.
+If you need to run those legacy JiBX steps explicitly, enable:
+
+    -DlegacyJibxCodegen=true
+
+Recommended local validation command:
+
+    ./mvnw -Denforcer.skip=true verify -DskipITs
+
+If you are validating with a temporary JDK lower than 25, override `java.release` explicitly (for example `-Djava.release=23`).
+
+Notes:
+
+* A small set of JiBX-dependent tests are excluded in `celerio-engine` because legacy JiBX bindings are not compatible with modern JDKs.
+* The `-Pit` integration profile still requires the legacy JiBX binding pipeline and currently fails on modern JDKs.
 
 ## Related projects
 

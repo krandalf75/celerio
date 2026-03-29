@@ -32,24 +32,36 @@
         <property name="pomArtifactId" value="${pom.artifactId}	"/>
     </bean>
 
-    <bean id="celerioMarshaller" class="org.springframework.oxm.jibx.JibxMarshaller">
-        <property name="targetClass" value="com.jaxio.celerio.configuration.Celerio"/>
-        <property name="indent" value="2"/>
+    <bean id="celerioMarshaller" class="org.springframework.oxm.jaxb.Jaxb2Marshaller">
+        <property name="classesToBeBound">
+            <list>
+                <value>com.jaxio.celerio.configuration.Celerio</value>
+            </list>
+        </property>
     </bean>
 
-    <bean id="dbMetadataMarshaller" class="org.springframework.oxm.jibx.JibxMarshaller">
-        <property name="targetClass" value="com.jaxio.celerio.configuration.database.Metadata"/>
-        <property name="indent" value="2"/>
+    <bean id="dbMetadataMarshaller" class="org.springframework.oxm.jaxb.Jaxb2Marshaller">
+        <property name="classesToBeBound">
+            <list>
+                <value>com.jaxio.celerio.configuration.database.Metadata</value>
+            </list>
+        </property>
     </bean>
 
-    <bean id="eclipseProfilesMarshaller" class="org.springframework.oxm.jibx.JibxMarshaller">
-        <property name="targetClass" value="com.jaxio.celerio.configuration.eclipse.Profiles"/>
-        <property name="indent" value="2"/>
+    <bean id="eclipseProfilesMarshaller" class="org.springframework.oxm.jaxb.Jaxb2Marshaller">
+        <property name="classesToBeBound">
+            <list>
+                <value>com.jaxio.celerio.configuration.eclipse.Profiles</value>
+            </list>
+        </property>
     </bean>
 
-    <bean id="celerioPackMarshaller" class="org.springframework.oxm.jibx.JibxMarshaller">
-        <property name="targetClass" value="com.jaxio.celerio.configuration.pack.CelerioPack"/>
-        <property name="indent" value="2"/>
+    <bean id="celerioPackMarshaller" class="org.springframework.oxm.jaxb.Jaxb2Marshaller">
+        <property name="classesToBeBound">
+            <list>
+                <value>com.jaxio.celerio.configuration.pack.CelerioPack</value>
+            </list>
+        </property>
     </bean>
 
 

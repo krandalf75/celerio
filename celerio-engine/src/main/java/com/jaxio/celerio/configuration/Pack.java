@@ -20,6 +20,8 @@ import lombok.Setter;
 import lombok.ToString;
 import org.springframework.util.Assert;
 
+import javax.xml.bind.annotation.XmlAttribute;
+
 import java.util.List;
 
 import static com.google.common.collect.Lists.newArrayList;
@@ -52,6 +54,7 @@ public class Pack {
     /*
      * Name of the pack
      */
+    @XmlAttribute(name = "name")
     public String getName() {
         return name;
     }
@@ -65,6 +68,7 @@ public class Pack {
      * It should be relative to the project, or absolute.<br>
      * Example: pack-something/src/main/resources
      */
+    @XmlAttribute(name = "path")
     public String getPath() {
         return path;
     }
@@ -76,6 +80,7 @@ public class Pack {
     /*
      * Should this pack be used ?
      */
+    @XmlAttribute(name = "enable")
     public boolean isEnable() {
         return enable;
     }
@@ -83,6 +88,7 @@ public class Pack {
     /*
      * Specify the pack order, its main interest is when two packs produce the same artifacts.
      */
+    @XmlAttribute(name = "order")
     public Integer getOrder() {
         return order;
     }

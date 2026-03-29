@@ -20,7 +20,8 @@ import com.jaxio.celerio.configuration.eclipse.Profiles;
 import com.jaxio.celerio.configuration.eclipse.Setting;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.oxm.jibx.JibxMarshaller;
+import org.springframework.oxm.Marshaller;
+import org.springframework.oxm.Unmarshaller;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -33,10 +34,14 @@ public class EclipseProfilesLoader extends AbstractJibxLoader<Profiles> {
 
     @Autowired
     @Qualifier("eclipseProfilesMarshaller")
-    private JibxMarshaller marshaller;
+    private Marshaller marshaller;
 
-    public JibxMarshaller getMarshaller() {
+    public Marshaller getMarshaller() {
         return marshaller;
+    }
+
+    public Unmarshaller getUnmarshaller() {
+        return (Unmarshaller) marshaller;
     }
 
     public List<Setting> loadSettingsFromEclipseFile(File eclipseFile) throws IOException {

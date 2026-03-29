@@ -24,7 +24,7 @@
     <version>4.0.24-SNAPSHOT</version>
 
     <build>
-        <defaultGoal>bootstrap:bootstrap-it</defaultGoal>
+        <defaultGoal>com.jaxio.celerio:bootstrap-maven-plugin:bootstrap-it</defaultGoal>
         <plugins>
             <plugin>
                 <groupId>com.jaxio.celerio</groupId>

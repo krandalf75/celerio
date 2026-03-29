@@ -19,6 +19,9 @@ package com.jaxio.celerio.configuration;
 import lombok.Setter;
 import org.springframework.util.AntPathMatcher;
 
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlTransient;
+
 import java.io.File;
 import java.util.List;
 
@@ -53,6 +56,7 @@ public class Pattern {
      * <li>com/yourcompany/*\/*.jsp - matches all .jsp files in the com/yourcompany directory</li>
      * </ul>
      */
+    @XmlAttribute(name = "pattern")
     public String getPattern() {
         return pattern;
     }
@@ -60,10 +64,12 @@ public class Pattern {
     /*
      * True is is an inclusion pattern, false for an exclusion ?
      */
+    @XmlAttribute(name = "include")
     public boolean isInclude() {
         return include;
     }
 
+    @XmlTransient
     public AntPathMatcher getAntPathMatcher() {
         return antPathMatcher;
     }

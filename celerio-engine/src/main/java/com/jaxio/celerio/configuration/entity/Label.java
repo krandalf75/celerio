@@ -18,6 +18,8 @@ package com.jaxio.celerio.configuration.entity;
 
 import lombok.Setter;
 
+import javax.xml.bind.annotation.XmlAttribute;
+
 @Setter
 public class Label {
 
@@ -27,6 +29,7 @@ public class Label {
     /*
      * The label's language, for example 'fr'. Leave it null for the base.
      */
+    @XmlAttribute(name = "lang")
     public String getLang() {
         return lang;
     }
@@ -34,6 +37,7 @@ public class Label {
     /*
      * The label. It is copied in properties file located in the folder 'src/main/resources/localization/domain'.
      */
+    @XmlAttribute(name = "value")
     public String getValue() {
         return value;
     }

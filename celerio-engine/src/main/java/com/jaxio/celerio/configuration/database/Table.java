@@ -22,6 +22,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.util.Assert;
 
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementWrapper;
+import javax.xml.bind.annotation.XmlTransient;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -68,6 +73,7 @@ public class Table {
     @Setter
     protected String catalog;
 
+    @XmlTransient
     public Map<String, Column> getColumnsByName() {
         return columnsByName;
     }
@@ -76,6 +82,7 @@ public class Table {
         this.columnsByName = columnsByName;
     }
 
+    @XmlTransient
     public Map<String, IndexHolder> getIndexHoldersByName() {
         return indexHoldersByName;
     }
@@ -84,6 +91,7 @@ public class Table {
         this.indexHoldersByName = indexHoldersByName;
     }
 
+    @XmlTransient
     public Map<String, ForeignKey> getForeignKeysByName() {
         return foreignKeysByName;
     }
@@ -96,6 +104,7 @@ public class Table {
      * This table name<br>
      * Example: USER
      */
+    @XmlAttribute(name = "name")
     public String getName() {
         return name;
     }
@@ -108,6 +117,7 @@ public class Table {
      * Documentation for this table<br>
      * Example: Table containing all the user related information
      */
+    @XmlAttribute(name = "remarks")
     public String getRemarks() {
         return remarks;
     }
@@ -115,6 +125,7 @@ public class Table {
     /*
      * Type of the table
      */
+    @XmlAttribute(name = "type")
     public TableType getType() {
         return type;
     }
@@ -126,6 +137,8 @@ public class Table {
     /*
      * Describes all the columns metadata for this table
      */
+    @XmlElementWrapper(name = "columns")
+    @XmlElement(name = "column")
     public List<Column> getColumns() {
         return columns;
     }
@@ -156,6 +169,8 @@ public class Table {
     }
 
     public Column getColumnByName(String name) {
+        ensureColumnsByNameInitialized();
+
         if (name == null) {
             return null;
         }
@@ -175,6 +190,8 @@ public class Table {
     /*
      * Describes all the indexes for this table
      */
+    @XmlElementWrapper(name = "indexes")
+    @XmlElement(name = "indexe")
     public List<Index> getIndexes() {
         return indexes;
     }
@@ -216,6 +233,8 @@ public class Table {
      * Returns the Index List that represent unique constraints.
      */
     public List<IndexHolder> getUniqueIndexHolders() {
+        ensureIndexHoldersInitialized();
+
         List<IndexHolder> result = newArrayList();
 
         for (IndexHolder ih : indexHoldersByName.values()) {
@@ -228,6 +247,7 @@ public class Table {
     }
 
     public IndexHolder getIndexHolderByName(String indexName) {
+        ensureIndexHoldersInitialized();
         return indexHoldersByName.get(indexName.toUpperCase());
     }
 
@@ -235,6 +255,8 @@ public class Table {
      * Determine if the passed column is part of a unique index that has only 1 element, the passed column.
      */
     public boolean isUnique(String columnName) {
+        ensureIndexHoldersInitialized();
+
         if (columnName == null) {
             return false;
         }
@@ -256,6 +278,8 @@ public class Table {
     /*
      * Describes all the imported keys for this table
      */
+    @XmlElementWrapper(name = "importedKeys")
+    @XmlElement(name = "importedKey")
     public List<ImportedKey> getImportedKeys() {
         return importedKeys;
     }
@@ -281,6 +305,8 @@ public class Table {
      * Check if the passed importedKey is already present or not in a existing ForeignKey of size 1.
      */
     public boolean alreadyPresent(ImportedKey importedKey) {
+        ensureForeignKeysInitialized();
+
         if (foreignKeysByName == null) {
             return false;
         }
@@ -315,10 +341,12 @@ public class Table {
     }
 
     public ForeignKey getForeignKeyByName(String name) {
+        ensureForeignKeysInitialized();
         return foreignKeysByName.get(name.toUpperCase());
     }
 
     public Collection<ForeignKey> getForeignKeys() {
+        ensureForeignKeysInitialized();
         return foreignKeysByName.values();
     }
 
@@ -329,6 +357,8 @@ public class Table {
     /*
      * Describes all the primary keys for this table
      */
+    @XmlElementWrapper(name = "primaryKeys")
+    @XmlElement(name = "primaryKey")
     public List<String> getPrimaryKeys() {
         return primaryKeys;
     }
@@ -395,5 +425,44 @@ public class Table {
 
     public String asKeyForMap() {
         return keyForMap(schemaName, name);
+    }
+
+    private void ensureColumnsByNameInitialized() {
+        if (!columnsByName.isEmpty() || columns == null || columns.isEmpty()) {
+            return;
+        }
+
+        columnsByName = newHashMap();
+        for (Column column : columns) {
+            if (column != null) {
+                putColumnByName(column);
+            }
+        }
+    }
+
+    private void ensureIndexHoldersInitialized() {
+        if (!indexHoldersByName.isEmpty() || indexes == null || indexes.isEmpty()) {
+            return;
+        }
+
+        indexHoldersByName = newHashMap();
+        for (Index index : indexes) {
+            if (index != null) {
+                putIndexInIndexHoldersByName(index);
+            }
+        }
+    }
+
+    private void ensureForeignKeysInitialized() {
+        if (!foreignKeysByName.isEmpty() || importedKeys == null || importedKeys.isEmpty()) {
+            return;
+        }
+
+        foreignKeysByName = newHashMap();
+        for (ImportedKey importedKey : importedKeys) {
+            if (importedKey != null) {
+                putImportedKeyInForeignKeyByName(importedKey);
+            }
+        }
     }
 }

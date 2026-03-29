@@ -18,12 +18,25 @@ package com.jaxio.celerio.configuration.eclipse;
 
 import lombok.Data;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
+
 import java.util.List;
 
 @Data
+@XmlAccessorType(XmlAccessType.FIELD)
 public class Profile {
+    @XmlAttribute(name = "kind")
     private String kind;
+
+    @XmlAttribute(name = "name")
     private String name;
+
+    @XmlAttribute(name = "version")
     private String version;
+
+    @XmlElement(name = "setting")
     private List<Setting> settings;
 }

@@ -71,7 +71,7 @@ public class FileTracker {
             return newHashMap();
         }
 
-        XStream xstream = new XStream();
+        XStream xstream = createXStream();
         FileInputStream in = new FileInputStream(xmlFileMetaDatas);
         HashMap<String, FileMetaData> fileMetaDatas = (HashMap<String, FileMetaData>) xstream.fromXML(in);
         closeQuietly(in);
@@ -86,10 +86,20 @@ public class FileTracker {
             parent.mkdirs();
         } // else child was for example "."
 
-        XStream xstream = new XStream();
+        XStream xstream = createXStream();
         FileOutputStream out = new FileOutputStream(xmlFileMetaDatas);
         xstream.toXML(fileMetaDatas, out);
         closeQuietly(out);
+    }
+
+    private XStream createXStream() {
+        XStream xstream = new XStream();
+        XStream.setupDefaultSecurity(xstream);
+        xstream.allowTypesByWildcard(new String[]{
+                "com.jaxio.celerio.output.*",
+                "java.util.*"
+        });
+        return xstream;
     }
 
     public HashSet<FileMetaData> deleteGeneratedFileIfIdentical(File projectDir, List<String> excludedPatterns) throws IOException {

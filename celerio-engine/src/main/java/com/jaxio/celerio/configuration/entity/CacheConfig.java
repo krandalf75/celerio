@@ -18,6 +18,8 @@ package com.jaxio.celerio.configuration.entity;
 
 import lombok.Setter;
 
+import javax.xml.bind.annotation.XmlAttribute;
+
 import static org.springframework.util.StringUtils.hasLength;
 
 /**
@@ -32,14 +34,17 @@ public class CacheConfig {
     /*
      * Hibernate/EhCache CacheConcurrencyStrategy. Use NONE if you do not want any Cache annotation to be set.
      */
+    @XmlAttribute(name = "usage")
     public CacheConcurrencyStrategy getUsage() {
         return usage;
     }
 
+    @XmlAttribute(name = "include")
     public String getInclude() {
         return include;
     }
 
+    @XmlAttribute(name = "region")
     public String getRegion() {
         return region;
     }

@@ -19,6 +19,11 @@ package com.jaxio.celerio.configuration.database;
 import lombok.Setter;
 import org.apache.commons.lang.StringUtils;
 
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementWrapper;
+import javax.xml.bind.annotation.XmlTransient;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +34,7 @@ import static com.google.common.collect.Maps.newHashMap;
 import static com.jaxio.celerio.configuration.Util.nonNull;
 import static com.jaxio.celerio.configuration.database.Table.keyForMap;
 
+@XmlRootElement(name = "metadata", namespace = "http://www.jaxio.com/schema/celerio")
 public class Metadata {
     @Setter
     private JdbcConnectivity jdbcConnectivity = new JdbcConnectivity();
@@ -57,10 +63,13 @@ public class Metadata {
         return databaseInfo;
     }
 
+    @XmlElementWrapper(name = "tables")
+    @XmlElement(name = "table")
     public List<Table> getTables() {
         return tables;
     }
 
+    @XmlTransient
     public Map<String, Table> getTablesByName() {
         return tablesByName;
     }
@@ -71,6 +80,8 @@ public class Metadata {
     }
 
     public Table getTableByName(String tableName) {
+        ensureLookupMapsInitialized();
+
         if (tableName == null) {
             return null;
         }
@@ -83,6 +94,8 @@ public class Metadata {
     }
 
     public Table getTableBySchemaAndName(String schemaName, String tableName) {
+        ensureLookupMapsInitialized();
+
         if (tableName == null) {
             return null;
         }
@@ -102,6 +115,22 @@ public class Metadata {
         }
 
         tablesBySchemaAndName.put(keyForMap(table.schemaName, table.name), table);
+    }
+
+    private void ensureLookupMapsInitialized() {
+        if (!tablesByName.isEmpty() || !tablesBySchemaAndName.isEmpty() || tables.isEmpty()) {
+            return;
+        }
+
+        tablesInMultipleSchema = new HashSet<String>();
+        tablesByName = newHashMap();
+        tablesBySchemaAndName = newHashMap();
+
+        for (Table table : tables) {
+            if (table != null) {
+                putTable(table);
+            }
+        }
     }
 
     public void cleanMetadata() {

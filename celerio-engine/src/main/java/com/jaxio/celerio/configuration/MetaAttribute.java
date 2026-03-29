@@ -20,14 +20,21 @@ import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAttribute;
+
 /**
  * Meta attributes are free form key value pairs
  */
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@XmlAccessorType(XmlAccessType.FIELD)
 public class MetaAttribute {
+    @XmlAttribute(name = "name")
     private String name;
+    @XmlAttribute(name = "value")
     private String value;
 
     /*

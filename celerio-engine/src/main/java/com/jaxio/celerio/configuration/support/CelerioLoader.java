@@ -21,8 +21,9 @@ import com.jaxio.celerio.configuration.Include;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.oxm.Marshaller;
+import org.springframework.oxm.Unmarshaller;
 import org.springframework.oxm.XmlMappingException;
-import org.springframework.oxm.jibx.JibxMarshaller;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -36,10 +37,14 @@ public class CelerioLoader extends AbstractJibxLoader<Celerio> {
 
     @Autowired
     @Qualifier("celerioMarshaller")
-    private JibxMarshaller marshaller;
+    private Marshaller marshaller;
 
-    public JibxMarshaller getMarshaller() {
+    public Marshaller getMarshaller() {
         return marshaller;
+    }
+
+    public Unmarshaller getUnmarshaller() {
+        return (Unmarshaller) marshaller;
     }
 
     public Celerio load(String filename) throws XmlMappingException, IOException {

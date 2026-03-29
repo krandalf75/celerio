@@ -18,6 +18,10 @@ package com.jaxio.celerio.configuration;
 
 import lombok.Setter;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAttribute;
+
 /**
  * Used to introduce a new 'namer' property on each Celerio's entity context instance.
  * Entity namer properties are convenient when writing template for classes
@@ -26,11 +30,17 @@ import lombok.Setter;
  * "prefixEntityNameSuffix". Similarly ${entity.property.getter} returns "getPrefixEntityNameSuffix".
  */
 @Setter
+@XmlAccessorType(XmlAccessType.FIELD)
 public class EntityContextProperty {
+    @XmlAttribute(name = "property")
     private String property;
+    @XmlAttribute(name = "rootPackage")
     private String rootPackage;
+    @XmlAttribute(name = "subPackage")
     private String subPackage;
+    @XmlAttribute(name = "prefix")
     private String prefix;
+    @XmlAttribute(name = "suffix")
     private String suffix;
 
     /**

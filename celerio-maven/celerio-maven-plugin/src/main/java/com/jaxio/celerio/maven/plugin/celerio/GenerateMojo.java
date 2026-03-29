@@ -353,7 +353,7 @@ public class GenerateMojo extends AbstractMojo {
             }
 
             // override modules
-            List<Module> newModules = configuration.getModules();
+            List<com.jaxio.celerio.configuration.Module> newModules = configuration.getModules();
             if (newModules != null && !newModules.isEmpty()) {
                 celerio.getConfiguration().setModules(newModules);
             }
