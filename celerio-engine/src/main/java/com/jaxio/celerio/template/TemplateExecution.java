@@ -400,6 +400,11 @@ public class TemplateExecution {
         return previousEngine.isCurrentEnableDynamicImport();
     }
 
+    /** Map an API type name according to the Maven-selected generated namespace. */
+    public String mapGeneratedImport(String fullType) {
+        return ImportsContext.mapGeneratedImport(fullType);
+    }
+
     /**
      * Import the passed fullType.
      */

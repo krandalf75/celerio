@@ -17,6 +17,7 @@
 package com.jaxio.celerio.maven.plugin.celerio;
 
 import com.jaxio.celerio.Config;
+import com.jaxio.celerio.template.ImportsContext;
 import com.jaxio.celerio.configuration.*;
 import com.jaxio.celerio.configuration.database.JdbcConnectivity;
 import com.jaxio.celerio.configuration.database.Metadata;
@@ -118,6 +119,10 @@ public class GenerateMojo extends AbstractMojo {
     @Parameter(property = "celerio-maven-plugin.skip", defaultValue = "false")
     protected boolean skip;
 
+    /** Generate javax APIs by default, or Jakarta APIs when enabled by Maven. */
+    @Parameter(property = "celerio-maven-plugin.jakartaNamespace", defaultValue = "false")
+    protected boolean jakartaNamespace;
+
     /**
      * Specify the JDBC driver.
      * <p>
@@ -216,7 +221,12 @@ public class GenerateMojo extends AbstractMojo {
         config.setSpringfuseMode(getSpringfuseMode());
         exitIfConfigurationMissing(config);
         exitIfNoPackDefined(producer.getPackLoader());
-        producer.produce();
+        ImportsContext.setJakartaNamespace(jakartaNamespace);
+        try {
+            producer.produce();
+        } finally {
+            ImportsContext.setJakartaNamespace(false);
+        }
     }
 
     private void exitIfConfigurationMissing(Config config) throws MojoExecutionException {

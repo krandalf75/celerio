@@ -24,6 +24,12 @@ public class ImportsContext {
 
     private static final InheritableThreadLocal<ImportsHolder> currentImportsHolder = new InheritableThreadLocal<ImportsHolder>();
     private static final InheritableThreadLocal<Boolean> isExtendedByUser = new InheritableThreadLocal<Boolean>();
+    private static final InheritableThreadLocal<Boolean> jakartaNamespace = new InheritableThreadLocal<Boolean>() {
+        @Override
+        protected Boolean initialValue() {
+            return false;
+        }
+    };
 
     static {
         isExtendedByUser.set(false);
@@ -45,6 +51,25 @@ public class ImportsContext {
 
     public static void setIsExtendedByUser(boolean value) {
         isExtendedByUser.set(value);
+    }
+
+    /** Select Jakarta EE package names for generated imports. Legacy javax output remains the default. */
+    public static void setJakartaNamespace(boolean value) {
+        jakartaNamespace.set(value);
+    }
+
+    /** Map generated API imports to Jakarta while leaving the engine's own javax configuration types untouched. */
+    public static String mapGeneratedImport(String fullType) {
+        if (!Boolean.TRUE.equals(jakartaNamespace.get()) || fullType == null) {
+            return fullType;
+        }
+        return fullType
+            .replace("static javax.persistence.", "static jakarta.persistence.")
+            .replace("javax.persistence.", "jakarta.persistence.")
+            .replace("javax.validation.", "jakarta.validation.")
+            .replace("javax.servlet.", "jakarta.servlet.")
+            .replace("org.hibernate.validator.constraints.Email", "jakarta.validation.constraints.Email")
+            .replace("org.hibernate.validator.constraints.NotEmpty", "jakarta.validation.constraints.NotEmpty");
     }
 
     /**

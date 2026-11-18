@@ -48,6 +48,10 @@ public class ImportsHolder {
      * @return true if it is imported for the first time.
      */
     public boolean addImport(PackageImport packageImport) {
+        String mappedName = ImportsContext.mapGeneratedImport(packageImport.getName());
+        if (!mappedName.equals(packageImport.getName())) {
+            packageImport = new PackageImport(mappedName);
+        }
         // no need to import well known types
         if (!packageImport.isImportNeeded()) {
             return false;

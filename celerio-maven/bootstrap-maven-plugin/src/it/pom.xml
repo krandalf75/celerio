@@ -21,7 +21,7 @@
 
     <packaging>pom</packaging>
     <name>${project.artifactId}</name>
-    <version>4.0.24-SNAPSHOT</version>
+    <version>6.0.24</version>
 
     <build>
         <defaultGoal>com.jaxio.celerio:bootstrap-maven-plugin:bootstrap-it</defaultGoal>

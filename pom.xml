@@ -20,7 +20,7 @@
     <groupId>com.jaxio.celerio</groupId>
     <artifactId>celerio-parent</artifactId>
     <packaging>pom</packaging>
-    <version>4.0.24-SNAPSHOT</version>
+    <version>6.0.24</version>
 
     <url>https://github.com/jaxio/celerio</url>
     <description>Celerio is a code generator tool for data-driven application.</description>
@@ -82,7 +82,7 @@
         <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
         <maven-deploy-plugin.version>3.1.4</maven-deploy-plugin.version>
         <maven-release-plugin.version>3.1.1</maven-release-plugin.version>
-        <maven-plugin-plugin.version>3.15.1</maven-plugin-plugin.version>
+        <maven-plugin-plugin.version>3.16.0</maven-plugin-plugin.version>
         <maven-enforcer-plugin.version>3.6.2</maven-enforcer-plugin.version>
         <lombok.version>1.18.38</lombok.version>
 
