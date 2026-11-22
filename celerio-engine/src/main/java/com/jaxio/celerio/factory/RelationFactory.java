@@ -24,6 +24,7 @@ import com.jaxio.celerio.configuration.database.Table;
 import com.jaxio.celerio.configuration.entity.*;
 import com.jaxio.celerio.model.Attribute;
 import com.jaxio.celerio.model.Entity;
+import com.jaxio.celerio.model.PrimaryKey;
 import com.jaxio.celerio.model.Relation;
 import com.jaxio.celerio.model.relation.*;
 import com.jaxio.celerio.support.Namer;
@@ -36,6 +37,7 @@ import org.springframework.util.Assert;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static com.jaxio.celerio.util.MiscUtil.toReadableLabel;
@@ -47,11 +49,17 @@ import static java.lang.Boolean.TRUE;
 @Slf4j
 public class RelationFactory {
 
-    @Autowired
-    private Config topLevelCfg;
+    private static final String EXCLUDED_TARGET_REASON = ". Reason: foreign key references an excluded table: ";
+
+    private final Config topLevelCfg;
+
+    private final RelationCollisionUtil relationUtil;
 
     @Autowired
-    private RelationCollisionUtil relationUtil;
+    public RelationFactory(Config topLevelCfg, RelationCollisionUtil relationUtil) {
+        this.topLevelCfg = topLevelCfg;
+        this.relationUtil = relationUtil;
+    }
 
     public void setupRelations(Entity entity) {
         if (isMiddleEntityCandidate(entity)) {
@@ -103,8 +111,8 @@ public class RelationFactory {
 
     private boolean isMiddleEntityCandidate(Entity entity) {
         if (entity.hasInheritance()) {
+            // Keep inherited entities out of automatic join-entity classification.
             return false;
-            // TODO: inheritance + m2m ?
         }
 
         // by configuration
@@ -139,7 +147,7 @@ public class RelationFactory {
     private void setupOtherRelations(Entity entity) {
         for (ForeignKey fk : getForeignKeys(entity)) {
             if (!cfg().hasTable(fk.getImportedKey().getPkTableName())) {
-                log.info("Skip association for entity " + entity.getName() + ". Reason: foreign key references an excluded table: " + fk.toString());
+                log.info("Skip association for entity " + entity.getName() + EXCLUDED_TARGET_REASON + fk.toString());
                 continue;
             }
 
@@ -169,8 +177,7 @@ public class RelationFactory {
                 return false;
             }
 
-            Attribute targetAttribute = getTargetAttribute(importedKey, targetEntity);
-            if (targetAttribute == null) {
+            if (findTargetAttribute(importedKey, targetEntity).isEmpty()) {
                 log.warn("Could not find target attribute pkColumnName: " + importedKey.getPkColumnName());
                 return false;
             }
@@ -202,13 +209,13 @@ public class RelationFactory {
 
         // Let's prevent association to table that are filtered out.
         if (!cfg().hasTable(fkLeft.getImportedKey().getPkTableName())) {
-            log.info("Skip simple NN association carried by entity " + entity.getName() + ". Reason: foreign key references an excluded table: "
+            log.info("Skip simple NN association carried by entity " + entity.getName() + EXCLUDED_TARGET_REASON
                     + fkLeft.toString());
             return;
         }
 
         if (!cfg().hasTable(fkRight.getImportedKey().getPkTableName())) {
-            log.info("Skip simple NN association carried by entity " + entity.getName() + ". Reason: foreign key references an excluded table: "
+            log.info("Skip simple NN association carried by entity " + entity.getName() + EXCLUDED_TARGET_REASON
                     + fkRight.toString());
             return;
         }
@@ -227,7 +234,6 @@ public class RelationFactory {
             fkRight = fkTemp;
 
             attrLeft = attrRight;
-            attrRight = null; // so we do not use it by mistake.
         }
 
         // Now that we have the real left side by convention, let's check if the user want to change the convention.
@@ -237,7 +243,7 @@ public class RelationFactory {
             fkRight = fkTemp;
         }
 
-        // TODO: support composite in many to many
+        // Join-entity shortcuts require two single-column foreign keys.
         if (fkLeft.getSize() == 1 && fkRight.getSize() == 1) {
 
             // build intermediate relations to ease our pain (!)
@@ -251,7 +257,6 @@ public class RelationFactory {
                 // MANY TO ONE with intermediate table
                 buildIntermediateManyToOneOneToMany(middleToLeft, entity, middleToRight);
             }
-            // TODO: intermediate one to one ...
 
             // mark this middle join entity
             entity.setManyToManyJoinEntity(true);
@@ -284,7 +289,7 @@ public class RelationFactory {
 
         if (shouldCreateInverse(m2m)) {
             // MANY TO MANY inverse
-            ManyToMany inverseM2m = (ManyToMany) m2m.createInverse(); // TODO: fix cast ?
+            AbstractRelation inverseM2m = m2m.createInverse();
             ManyToManyConfig inverseM2mConfig = middleToLeft.getFromAttribute().getColumnConfig().getManyToManyConfig();
             inverseM2m.setCascadeGetter(inverseM2mConfig);
             inverseM2m.setFetchTypeGetter(inverseM2mConfig);
@@ -318,7 +323,7 @@ public class RelationFactory {
 
         if (shouldCreateInverse(m2o)) {
             // ONE TO MANY with intermediate table
-            IntermediateOneToMany o2m = (IntermediateOneToMany) m2o.createInverse(); // TODO: fix cast ?
+            AbstractRelation o2m = m2o.createInverse();
             OneToManyConfig o2mConfig = middleToLeft.getFromAttribute().getColumnConfig().getOneToManyConfig();
 
             o2m.setCascadeGetter(o2mConfig);
@@ -381,10 +386,10 @@ public class RelationFactory {
     private SimpleRelation buildSimpleRelation(Entity entity, ImportedKey importedKey, ForeignKey fk) {
         final Attribute fromAttribute = entity.getAttributeByTableAndColumnName(fk.getFkTableName(), importedKey.getFkColumnName());
         Assert.isTrue(fromAttribute.getEntity().equals(entity));
-        Entity targetEntity = getTargetEntity(importedKey, fromAttribute.getColumnConfig());
+        Entity targetEntity = requireTargetEntity(importedKey, fromAttribute.getColumnConfig());
         Attribute targetAttribute = getTargetAttribute(importedKey, targetEntity);
 
-        if (fromAttribute.isUnique() && fromAttribute.getColumnConfig().getEnableOneToVirtualOne()) {
+        if (fromAttribute.isUnique() && Boolean.TRUE.equals(fromAttribute.getColumnConfig().getEnableOneToVirtualOne())) {
             // many to one + one to virtual one
             return buildSimpleManyToOneOneToVirtualOne(entity, fromAttribute, targetEntity, targetAttribute);
         } else if (fromAttribute.isUnique() || fromAttribute.getColumnConfig().getOneToOneConfig() != null) {
@@ -496,8 +501,6 @@ public class RelationFactory {
 
         // composite many to one + one to many
         return buildCompositeManyToOneOneToMany(entity, fromAttributes, fk);
-
-        // TODO: composite ONE TO ONE ?
     }
 
     // ---------------------------------------------------
@@ -505,7 +508,7 @@ public class RelationFactory {
     // ---------------------------------------------------
 
     CompositeManyToOne buildCompositeManyToOneOneToMany(Entity entity, final List<Attribute> fromAttributes, ForeignKey fk) {
-        Entity targetEntity = getTargetEntity(fk.getImportedKey(), fromAttributes.get(0).getColumnConfig());
+        Entity targetEntity = requireTargetEntity(fk.getImportedKey(), fromAttributes.get(0).getColumnConfig());
         List<Attribute> targetAttributes = getTargetAttributes(fk, targetEntity);
 
         // composite MANY TO ONE + ONE TO MANY
@@ -542,38 +545,44 @@ public class RelationFactory {
         }
     }
 
-    private Attribute getTargetAttribute(ImportedKey importedKey, Entity targetEntity) {
-        // take our chance to get it the first time.
-        Attribute targetAttribute = targetEntity.getAttributeByTableAndColumnName(importedKey.getPkTableName(), importedKey.getPkColumnName());
+    private Entity requireTargetEntity(ImportedKey key, ColumnConfig columnConfig) {
+        Entity entity = getTargetEntity(key, columnConfig);
+        if (entity == null) {
+            throw new IllegalStateException("Could not resolve foreign key target entity for table " + key.getPkTableName());
+        }
+        return entity;
+    }
 
-        if (targetAttribute == null) {
-            if (targetEntity.isRoot()) {
-                if (targetEntity.getPrimaryKey().isSimple()) {
-                    // fallback to pk attribute
-                    targetAttribute = targetEntity.getPrimaryKey().getAttribute();
-                } else {
-                    // TODO:
-                    log.warn("TODO: support composite PK");
-                }
-            } else {
-                // move up the hierarchy and look after the target attribute which could be a non pk!
-                for (Entity e = targetEntity.getParent(); targetAttribute == null && e != null; e = e.getParent()) {
-                    targetAttribute = e.getAttributeByTableAndColumnName(importedKey.getPkTableName(), importedKey.getPkColumnName());
-                }
+    private Attribute getTargetAttribute(ImportedKey key, Entity targetEntity) {
+        return findTargetAttribute(key, targetEntity).orElseThrow(() -> new IllegalStateException(
+                "Could not resolve foreign key target " + key.getPkTableName() + "." + key.getPkColumnName()));
+    }
 
-                if (targetAttribute == null) {
-                    if (targetEntity.getRoot().getPrimaryKey().isSimple()) {
-                        // fallback to pk attribute
-                        targetAttribute = targetEntity.getRoot().getPrimaryKey().getAttribute();
-                    } else {
-                        // TODO:
-                        log.warn("TODO: support composite PK");
-                    }
-                }
+    private Optional<Attribute> findTargetAttribute(ImportedKey key, Entity targetEntity) {
+        if (targetEntity == null) {
+            return Optional.empty();
+        }
+        for (Entity entity = targetEntity; entity != null; entity = entity.getParent()) {
+            Attribute attribute = entity.getAttributeByTableAndColumnName(key.getPkTableName(), key.getPkColumnName());
+            if (attribute != null) {
+                return Optional.of(attribute);
             }
         }
 
-        return targetAttribute;
+        PrimaryKey primaryKey = targetEntity.getRoot().getPrimaryKey();
+        if (primaryKey == null) {
+            return Optional.empty();
+        }
+        if (primaryKey.isSimple()) {
+            return Optional.ofNullable(primaryKey.getAttribute());
+        }
+        String columnName = key.getPkColumnName();
+        if (!primaryKey.isComposite() || columnName == null) {
+            return Optional.empty();
+        }
+        return primaryKey.getAttributes().stream()
+                .filter(attribute -> columnName.equalsIgnoreCase(attribute.getColumnName()))
+                .findFirst();
     }
 
     private List<Attribute> getTargetAttributes(ForeignKey fk, Entity targetEntity) {
@@ -599,30 +608,32 @@ public class RelationFactory {
             return;
         }
 
-        for (AssociationActionGetter associationActionGetter : associationActionGetters) {
-            if (associationActionGetter != null) {
-                AssociationAction associationAction = associationActionGetter.getAssociationAction();
-                if (associationAction != null) {
-                    if (associationAction.getCreate() != null) {
-                        relation.setGenCreate(associationAction.getCreate());
-                    }
-                    if (associationAction.getEdit() != null) {
-                        relation.setGenEdit(associationAction.getEdit());
-                    }
-                    if (associationAction.getView() != null) {
-                        relation.setGenView(associationAction.getView());
-                    }
-                    if (associationAction.getSelect() != null) {
-                        relation.setGenSelect(associationAction.getSelect());
-                    }
-                    if (associationAction.getAutoComplete() != null) {
-                        relation.setGenAutoComplete(associationAction.getAutoComplete());
-                    }
-                    if (associationAction.getRemove() != null) {
-                        relation.setGenRemove(associationAction.getRemove());
-                    }
-                }
+        for (AssociationActionGetter getter : associationActionGetters) {
+            AssociationAction action = getter == null ? null : getter.getAssociationAction();
+            if (action != null) {
+                applyActions(relation, action);
             }
+        }
+    }
+
+    private void applyActions(Relation relation, AssociationAction associationAction) {
+        if (associationAction.getCreate() != null) {
+            relation.setGenCreate(associationAction.getCreate());
+        }
+        if (associationAction.getEdit() != null) {
+            relation.setGenEdit(associationAction.getEdit());
+        }
+        if (associationAction.getView() != null) {
+            relation.setGenView(associationAction.getView());
+        }
+        if (associationAction.getSelect() != null) {
+            relation.setGenSelect(associationAction.getSelect());
+        }
+        if (associationAction.getAutoComplete() != null) {
+            relation.setGenAutoComplete(associationAction.getAutoComplete());
+        }
+        if (associationAction.getRemove() != null) {
+            relation.setGenRemove(associationAction.getRemove());
         }
     }
 

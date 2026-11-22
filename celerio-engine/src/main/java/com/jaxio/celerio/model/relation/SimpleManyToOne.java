@@ -22,7 +22,7 @@ import com.jaxio.celerio.support.Namer;
 
 public abstract class SimpleManyToOne extends SimpleRelation {
 
-    public SimpleManyToOne(Namer fromNamer, Namer toNamer, Attribute fromAttribute, Entity fromEntity, Entity toEntity, Attribute toAttribute) {
+    protected SimpleManyToOne(Namer fromNamer, Namer toNamer, Attribute fromAttribute, Entity fromEntity, Entity toEntity, Attribute toAttribute) {
         super(fromNamer, toNamer, fromAttribute, fromEntity, toEntity, toAttribute);
     }
 
@@ -36,7 +36,7 @@ public abstract class SimpleManyToOne extends SimpleRelation {
     }
 
     @Override
-    final public boolean isManyToOne() {
+    public final boolean isManyToOne() {
         return true;
     }
 

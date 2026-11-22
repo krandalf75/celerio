@@ -27,54 +27,60 @@ public class CommentStyleTest {
                 + "/**\n" //
                 + " * un\n" //
                 + " */\n");
-        assertThat(CommentStyle.JAVADOC.decorate("un\ndeux", "")).isEqualTo("" //
-                + "/**\n" //
-                + " * un\n" //
-                + " * deux\n" //
-                + " */\n");
+        assertThat(CommentStyle.JAVADOC.decorate("un\ndeux", "")).isEqualTo("""
+                /**
+                 * un
+                 * deux
+                 */
+                """);
     }
 
     @Test
     public void dash() {
-        assertThat(CommentStyle.DASH.decorate("un\\ndeux", "")).isEqualTo("" //
-                + "#\n" //
-                + "# un\n" //
-                + "# deux\n" //
-                + "#\n");
+        assertThat(CommentStyle.DASH.decorate("un\\ndeux", "")).isEqualTo("""
+                #
+                # un
+                # deux
+                #
+                """);
     }
 
     @Test
     public void resolveEncodedReturns() {
-        assertThat(CommentStyle.JAVADOC.decorate("un\\ndeux", "")).isEqualTo("" //
-                + "/**\n" //
-                + " * un\n" //
-                + " * deux\n" //
-                + " */\n");
+        assertThat(CommentStyle.JAVADOC.decorate("un\\ndeux", "")).isEqualTo("""
+                /**
+                 * un
+                 * deux
+                 */
+                """);
     }
 
     @Test
     public void removeExtraSpaces() {
-        assertThat(CommentStyle.JAVADOC.decorate("un   deux", "")).isEqualTo("" //
-                + "/**\n" //
-                + " * un deux\n" //
-                + " */\n");
+        assertThat(CommentStyle.JAVADOC.decorate("un   deux", "")).isEqualTo("""
+                /**
+                 * un deux
+                 */
+                """);
     }
 
     @Test
     public void resolveConflicts() {
-        assertThat(CommentStyle.JAVADOC.decorate("Input a si /* comment truncated */", "")).isEqualTo("" //
-                + "/**\n" //
-                + " * Input a si\n" //
-                + " * comment truncated\n" //
-                + " */\n");
+        assertThat(CommentStyle.JAVADOC.decorate("Input a si /* comment truncated */", "")).isEqualTo("""
+                /**
+                 * Input a si
+                 * comment truncated
+                 */
+                """);
 
-        assertThat(CommentStyle.JAVADOC.decorate("Input /** here */ a si /* comment truncated */", "")).isEqualTo("" //
-                + "/**\n" //
-                + " * Input\n" //
-                + " * here\n" //
-                + " * a si\n" //
-                + " * comment truncated\n" //
-                + " */\n");
+        assertThat(CommentStyle.JAVADOC.decorate("Input /** here */ a si /* comment truncated */", "")).isEqualTo("""
+                /**
+                 * Input
+                 * here
+                 * a si
+                 * comment truncated
+                 */
+                """);
 
     }
 }

@@ -32,14 +32,14 @@ import static org.apache.commons.lang.StringUtils.substringBeforeLast;
 
 @Getter
 public class TemplatePackInfo {
-    final private String name;
-    final private String description;
-    final private String description2;
-    final private String command;
-    final private String commandHelp;
-    final private String projectLink;
-    final private Map<String, String> properties = new HashMap<String, String>();
-    final private List<EntityContextProperty> entityContextPropertyList;
+    private final String name;
+    private final String description;
+    private final String description2;
+    private final String command;
+    private final String commandHelp;
+    private final String projectLink;
+    private final Map<String, String> properties = new HashMap<String, String>();
+    private final List<EntityContextProperty> entityContextPropertyList;
 
     public TemplatePackInfo(String name) {
         this.name = name;
@@ -89,7 +89,7 @@ public class TemplatePackInfo {
 
     public boolean propertyEquals(String name, String value) {
         String v = properties.get(name.toLowerCase());
-        return v != null && v.toLowerCase().equals(value.toLowerCase());
+        return v != null && v.equalsIgnoreCase(value);
     }
 
     public boolean propertyIsTrue(String name) {

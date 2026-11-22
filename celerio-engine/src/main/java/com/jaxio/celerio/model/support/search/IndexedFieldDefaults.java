@@ -22,6 +22,10 @@ import repackaged.org.hibernate.search.annotations.Store;
 import repackaged.org.hibernate.search.annotations.TermVector;
 
 public class IndexedFieldDefaults {
+
+    private IndexedFieldDefaults() {
+    }
+
     public static String name = "";
     public static Store store = Store.NO;
     public static Boolean index = Boolean.TRUE;

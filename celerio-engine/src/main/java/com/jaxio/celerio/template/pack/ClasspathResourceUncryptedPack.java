@@ -33,9 +33,9 @@ import static org.springframework.beans.factory.config.BeanDefinition.SCOPE_PROT
 @Scope(SCOPE_PROTOTYPE)
 public class ClasspathResourceUncryptedPack implements TemplatePack {
 
-    private TemplatePackInfo templatePackInfo;
-    private List<String> templateNames = newArrayList();
-    private Map<String, Template> templates = newHashMap();
+    private final TemplatePackInfo templatePackInfo;
+    private final List<String> templateNames = newArrayList();
+    private final Map<String, Template> templates = newHashMap();
 
     public ClasspathResourceUncryptedPack(TemplatePackInfo templatePackInfo, Resource[] templatesAsResources) throws IOException {
         this.templatePackInfo = templatePackInfo;
@@ -56,7 +56,7 @@ public class ClasspathResourceUncryptedPack implements TemplatePack {
         // Force execution order to natural ordering.
         // Important otherwise it behaves differently on Mac/Linux.
         // Note: thanks to Jean-LouisL Boudart for reporting this.
-        Collections.sort(templateNames);
+        templateNames.sort(null);
     }
 
     // -----------------------------------------

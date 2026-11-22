@@ -117,11 +117,9 @@ public class EntityConfig implements CacheConfigGetter {
         return skip != null && skip == TRUE;
     }
 
-    /*
-     * The JPA entity's type. <br>
-     * For example, entityName="BankAccount". <br>
-     * By default, the entity name is deduced from the table name. <br>
-     * For example: 'bank_account' will become 'BankAccount';
+    /**
+     * The entity type defaults to a name derived from its table,
+     * such as {@code BankAccount} for {@code bank_account}.
      */
     @XmlAttribute(name = "entityName")
     public String getEntityName() {
@@ -231,7 +229,7 @@ public class EntityConfig implements CacheConfigGetter {
         return rootPackage;
     }
 
-    /*
+    /**
      * When you define a sub-package, the resulting entity's package becomes <code>rootPackage.domain.subPackage</code>
      * instead of <code>rootPackage.domain</code>. There is no sub-package by default.
      */
@@ -313,6 +311,10 @@ public class EntityConfig implements CacheConfigGetter {
         return metaAttributes;
     }
 
+    public void setMetaAttributes(List<MetaAttribute> metaAttributes) {
+        this.metaAttributes = metaAttributes;
+    }
+
     /*
      * This entity's columnConfigs. Note that for entities without inheritance or for entities with a JOIN inheritance strategy, if a column is present in the
      * table's meta data but has no corresponding entityConfig in this list, then an entityConfig is created by default and added automatically to this list.
@@ -360,9 +362,9 @@ public class EntityConfig implements CacheConfigGetter {
     }
 
     private void putColumnConfigByColumnName(ColumnConfig columnConfig) {
-        // TODO: assert not null...
-        if (columnConfig.getColumnName() != null) {
-            columnConfigByColumnName.put(columnConfig.getColumnName().toUpperCase(), columnConfig);
+        String columnName = columnConfig.getColumnName();
+        if (columnName != null) {
+            columnConfigByColumnName.put(columnName.toUpperCase(), columnConfig);
         }
     }
 

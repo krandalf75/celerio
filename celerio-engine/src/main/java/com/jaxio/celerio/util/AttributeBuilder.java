@@ -19,7 +19,7 @@ package com.jaxio.celerio.util;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 
 public class AttributeBuilder {
-    private StringBuilder ret = new StringBuilder();
+    private final StringBuilder ret = new StringBuilder();
     private boolean commentMode = false;
 
     public AttributeBuilder(boolean commentMode) {
@@ -34,7 +34,7 @@ public class AttributeBuilder {
 
     public void add(String attributeNameAndValue) {
         if (isNotBlank(attributeNameAndValue)) {
-            if (ret.length() > 0) {
+            if (!ret.isEmpty()) {
                 ret.append(", ");
             }
             ret.append(attributeNameAndValue);
@@ -62,7 +62,7 @@ public class AttributeBuilder {
             return;
         }
 
-        if (ret.length() > 0) {
+        if (!ret.isEmpty()) {
             ret.append(", ");
         }
 
@@ -79,7 +79,7 @@ public class AttributeBuilder {
     }
 
     public boolean isEmpty() {
-        return ret.length() == 0;
+        return ret.isEmpty();
     }
 
     public String bindAttributesTo(String annotation) {

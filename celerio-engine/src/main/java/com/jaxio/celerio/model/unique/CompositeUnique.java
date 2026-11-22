@@ -27,8 +27,8 @@ import static org.apache.commons.lang.StringUtils.removeEnd;
 
 @Getter
 public class CompositeUnique implements Unique {
-    private List<Attribute> attributes;
-    private String name;
+    private final List<Attribute> attributes;
+    private final String name;
 
     public CompositeUnique(String name, List<Attribute> attributes) {
         this.name = name;
@@ -43,7 +43,7 @@ public class CompositeUnique implements Unique {
             }
         }
 
-        return attributes.size() > 0;
+        return !attributes.isEmpty();
     }
 
     @Override
@@ -54,7 +54,7 @@ public class CompositeUnique implements Unique {
             }
         }
 
-        return attributes.size() > 0;
+        return !attributes.isEmpty();
     }
 
     /**

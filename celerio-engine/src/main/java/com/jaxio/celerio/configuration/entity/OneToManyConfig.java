@@ -17,6 +17,7 @@
 package com.jaxio.celerio.configuration.entity;
 
 import com.jaxio.celerio.configuration.MetaAttribute;
+import lombok.AccessLevel;
 import lombok.Setter;
 
 import java.util.List;
@@ -25,7 +26,8 @@ import static org.springframework.util.StringUtils.hasLength;
 
 @Setter
 public class OneToManyConfig implements CascadeGetter, CacheConfigGetter, FetchTypeGetter, OrderByGetter, AssociationActionGetter, LabelGetter {
-    private String var;
+    @Setter(AccessLevel.NONE)
+    private String associationVar;
     private String elementVar;
     private Boolean orphanRemoval;
     private FetchType fetch;
@@ -41,7 +43,11 @@ public class OneToManyConfig implements CascadeGetter, CacheConfigGetter, FetchT
      * The variable name for the collection. It should be plural, for example: 'children'. Please configure also the elementVar as the singular of this var.
      */
     public String getVar() {
-        return var;
+        return associationVar;
+    }
+
+    public void setVar(String varName) {
+        this.associationVar = varName;
     }
 
     public boolean hasVar() {
@@ -74,7 +80,7 @@ public class OneToManyConfig implements CascadeGetter, CacheConfigGetter, FetchT
         return fetch;
     }
 
-    /*
+    /**
      * Specifies the ordering of the elements. If not null, the JPA <code>@OrderBy</code> annotation is used.
      * Example: orderBy="birthdate DESC" will generate <code>@OrderBy("birthdate DESC")</code>
      */

@@ -46,10 +46,14 @@ public class ColumnConfigFactory {
     private static final AssociationDirection DEFAULT_ASSOCIATION_DIRECTION = AssociationDirection.UNIDIRECTIONAL;
     private static final boolean DEFAULT_ENABLE_ONE_TO_VITUAL_ONE = false;
 
+    private final Config config;
+    private final EnumCollisionUtil enumCollisionUtil;
+
     @Autowired
-    private Config config;
-    @Autowired
-    private EnumCollisionUtil enumCollisionUtil;
+    public ColumnConfigFactory(Config config, EnumCollisionUtil enumCollisionUtil) {
+        this.config = config;
+        this.enumCollisionUtil = enumCollisionUtil;
+    }
 
     public ColumnConfig buildColumnConfig(Entity entity, Table table, Column column) {
         ColumnConfig columnConfig = new ColumnConfig();
@@ -69,7 +73,6 @@ public class ColumnConfigFactory {
         columnConfig.setTableName(table.getName());
         columnConfig.setColumnName(column.getName());
 
-        columnConfig.setColumnName(fallBack(columnConfig.getColumnName(), column.getName()));
         columnConfig.setSize(fallBack(columnConfig.getSize(), column.getSize()));
         columnConfig.setOrdinalPosition(fallBack(columnConfig.getOrdinalPosition(), column.getOrdinalPosition()));
         columnConfig.setDisplayOrder(fallBack(columnConfig.getDisplayOrder(), columnConfig.getOrdinalPosition(), column.getOrdinalPosition()));
@@ -77,28 +80,19 @@ public class ColumnConfigFactory {
         columnConfig.setSearchFieldOrder(fallBack(columnConfig.getSearchFieldOrder(), columnConfig.getDisplayOrder(), columnConfig.getOrdinalPosition(), column.getOrdinalPosition()));
         columnConfig.setSearchResultOrder(fallBack(columnConfig.getSearchResultOrder(), columnConfig.getDisplayOrder(), columnConfig.getOrdinalPosition(), column.getOrdinalPosition()));
 
-        // typeConverter: no fallback
-        // pointsTo: no fallback (TODO ?)
+        // Type converters and target overrides come from explicit configuration.
         columnConfig.setComment(fallBack(columnConfig.getComment(), column.getRemarks()));
         columnConfig.setDecimalDigits(fallBack(columnConfig.getDecimalDigits(), column.getDecimalDigits()));
         columnConfig.setDefaultValue(fallBack(columnConfig.getDefaultValue(), column.getColumnDef()));
-        // messageKey: done at runtime
-        // isInverse: TODO
-        // isFormField: TODO
+        // The model resolves unset presentation and relationship flags after the table metadata is available.
 
         columnConfig.setAssociationDirection(fallBack(columnConfig.getAssociationDirection(), conf.getAssociationDirection(), DEFAULT_ASSOCIATION_DIRECTION));
         columnConfig.setEnableOneToVirtualOne(fallBack(columnConfig.getEnableOneToVirtualOne(), conf.getEnableOneToVirtualOne(),
                 DEFAULT_ENABLE_ONE_TO_VITUAL_ONE));
         columnConfig.setAutoIncrement(fallBack(columnConfig.getAutoIncrement(), column.getAutoIncrement()));
         columnConfig.setNullable(fallBack(columnConfig.getNullable(), column.isNullable()));
-        // isSearchField: TODO
-        // isSearchResult: TODO
-        // isSelectLabel: TODO
 
         columnConfig.setUnique(fallBack(columnConfig.getUnique(), table.isUnique(column.getName())));
-        // isVersion: TODO
-        // isVisible: TODO
-        // isPassword: TODO
     }
 
     private JdbcType getTypeFromMetaAttributes(Column column) {
@@ -124,7 +118,7 @@ public class ColumnConfigFactory {
 
     public void buildEnum(Entity entity, ColumnConfig columnConfig, Column column) {
         if (column.hasEnum()) {
-            buildDefaultEnumConfig(entity, columnConfig, column);
+            buildDefaultEnumConfig(columnConfig, column);
         }
         if (columnConfig.hasEnumConfig()) {
             buildEnumWithEnumConfig(entity, columnConfig);
@@ -133,7 +127,7 @@ public class ColumnConfigFactory {
         }
     }
 
-    private void buildDefaultEnumConfig(Entity entity, ColumnConfig columnConfig, Column column) {
+    private void buildDefaultEnumConfig(ColumnConfig columnConfig, Column column) {
         EnumConfig enumConfig = new EnumConfig();
         if (columnConfig.getEnumConfig() != null) {
             enumConfig = columnConfig.getEnumConfig();

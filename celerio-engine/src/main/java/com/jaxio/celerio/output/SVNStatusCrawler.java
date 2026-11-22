@@ -29,6 +29,9 @@ import java.util.Map;
 @Slf4j
 public class SVNStatusCrawler {
 
+    private SVNStatusCrawler() {
+    }
+
     public static boolean isProjectUnderSvn(File baseDir) {
         File svnDirHack = new File(baseDir, ".celerio-please-ignore-svn");
         if (svnDirHack.exists()) {
@@ -58,7 +61,7 @@ public class SVNStatusCrawler {
                 false /* collectParentExternals */,
                 handler, null);
         } catch (SVNException svne) {
-            throw new RuntimeException(svne);
+            throw new IllegalStateException("Could not read SVN status for " + baseDir, svne);
         }
 
         int counter = 0;

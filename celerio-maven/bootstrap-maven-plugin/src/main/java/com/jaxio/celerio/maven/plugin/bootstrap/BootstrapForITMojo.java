@@ -24,9 +24,9 @@ import org.apache.maven.plugins.annotations.Parameter;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 
 import static org.apache.commons.io.FileUtils.deleteDirectory;
-import static org.apache.commons.io.FileUtils.readFileToString;
 import static org.apache.commons.io.FileUtils.writeStringToFile;
 
 /**
@@ -123,7 +123,7 @@ public class BootstrapForITMojo extends BootstrapMojo {
         }
 
         try {
-            String content = readFileToString(generatedPom, "UTF-8");
+            String content = Files.readString(generatedPom.toPath());
             String updatedContent = content.replace("<url>http://", "<url>https://");
             updatedContent = removePrimefacesBootstrapTheme(updatedContent);
             updatedContent = addTikaRestletExclusions(updatedContent);
@@ -135,7 +135,7 @@ public class BootstrapForITMojo extends BootstrapMojo {
             updatedContent = addJaxbDependencies(updatedContent);
 
             if (!content.equals(updatedContent)) {
-                writeStringToFile(generatedPom, updatedContent, "UTF-8");
+                Files.writeString(generatedPom.toPath(), updatedContent);
             }
 
             ensureWebappDirectoryExists();
@@ -163,11 +163,13 @@ public class BootstrapForITMojo extends BootstrapMojo {
 
     private String removePrimefacesBootstrapTheme(String content) {
         final String optionalThemeDependency =
-                "        <dependency><!-- optional theme (see also web.xml to enable it) -->\n"
-                        + "            <groupId>org.primefaces.themes</groupId>\n"
-                        + "            <artifactId>bootstrap</artifactId>\n"
-                        + "            <version>${primefaces-themes.version}</version>\n"
-                        + "        </dependency>\n";
+                """
+                        <dependency><!-- optional theme (see also web.xml to enable it) -->
+                            <groupId>org.primefaces.themes</groupId>
+                            <artifactId>bootstrap</artifactId>
+                            <version>${primefaces-themes.version}</version>
+                        </dependency>
+                """;
 
         if (content.contains(optionalThemeDependency)) {
             return content.replace(optionalThemeDependency, "");
@@ -177,38 +179,42 @@ public class BootstrapForITMojo extends BootstrapMojo {
 
     private String addTikaRestletExclusions(String content) {
         final String tikaDependencyWithoutRestletExclusions =
-                "        <dependency>\n"
-                        + "            <groupId>org.apache.tika</groupId>\n"
-                        + "            <artifactId>tika-parsers</artifactId>\n"
-                        + "            <version>1.11</version>\n"
-                        + "            <exclusions>\n"
-                        + "                <exclusion>\n"
-                        + "                    <artifactId>commons-logging</artifactId>\n"
-                        + "                    <groupId>commons-logging</groupId>\n"
-                        + "                </exclusion>\n"
-                        + "            </exclusions>\n"
-                        + "        </dependency>\n";
+                """
+                        <dependency>
+                            <groupId>org.apache.tika</groupId>
+                            <artifactId>tika-parsers</artifactId>
+                            <version>1.11</version>
+                            <exclusions>
+                                <exclusion>
+                                    <artifactId>commons-logging</artifactId>
+                                    <groupId>commons-logging</groupId>
+                                </exclusion>
+                            </exclusions>
+                        </dependency>
+                """;
 
         final String tikaDependencyWithRestletExclusions =
-                "        <dependency>\n"
-                        + "            <groupId>org.apache.tika</groupId>\n"
-                        + "            <artifactId>tika-parsers</artifactId>\n"
-                        + "            <version>1.11</version>\n"
-                        + "            <exclusions>\n"
-                        + "                <exclusion>\n"
-                        + "                    <artifactId>commons-logging</artifactId>\n"
-                        + "                    <groupId>commons-logging</groupId>\n"
-                        + "                </exclusion>\n"
-                        + "                <exclusion>\n"
-                        + "                    <groupId>org.restlet.jee</groupId>\n"
-                        + "                    <artifactId>org.restlet</artifactId>\n"
-                        + "                </exclusion>\n"
-                        + "                <exclusion>\n"
-                        + "                    <groupId>org.restlet.jee</groupId>\n"
-                        + "                    <artifactId>org.restlet.ext.servlet</artifactId>\n"
-                        + "                </exclusion>\n"
-                        + "            </exclusions>\n"
-                        + "        </dependency>\n";
+                """
+                        <dependency>
+                            <groupId>org.apache.tika</groupId>
+                            <artifactId>tika-parsers</artifactId>
+                            <version>1.11</version>
+                            <exclusions>
+                                <exclusion>
+                                    <artifactId>commons-logging</artifactId>
+                                    <groupId>commons-logging</groupId>
+                                </exclusion>
+                                <exclusion>
+                                    <groupId>org.restlet.jee</groupId>
+                                    <artifactId>org.restlet</artifactId>
+                                </exclusion>
+                                <exclusion>
+                                    <groupId>org.restlet.jee</groupId>
+                                    <artifactId>org.restlet.ext.servlet</artifactId>
+                                </exclusion>
+                            </exclusions>
+                        </dependency>
+                """;
 
         if (content.contains(tikaDependencyWithoutRestletExclusions)) {
             return content.replace(tikaDependencyWithoutRestletExclusions, tikaDependencyWithRestletExclusions);
@@ -223,11 +229,13 @@ public class BootstrapForITMojo extends BootstrapMojo {
 
         final String repositoriesEndTag = "    </repositories>";
         final String restletRepository =
-                "        <repository>\n"
-                        + "            <id>maven-restlet</id>\n"
-                        + "            <url>https://maven.restlet.talend.com</url>\n"
-                        + "            <layout>default</layout>\n"
-                        + "        </repository>\n";
+                """
+                        <repository>
+                            <id>maven-restlet</id>
+                            <url>https://maven.restlet.talend.com</url>
+                            <layout>default</layout>
+                        </repository>
+                """;
 
         if (content.contains(repositoriesEndTag)) {
             return content.replace(repositoriesEndTag, restletRepository + repositoriesEndTag);
@@ -250,20 +258,28 @@ public class BootstrapForITMojo extends BootstrapMojo {
 
     private String modernizeAspectjDependencies(String content) {
         String updatedContent = content.replace(
-                "            <groupId>org.aspectj</groupId>\n"
-                        + "            <artifactId>aspectjrt</artifactId>\n"
-                        + "            <version>1.8.7</version>",
-                "            <groupId>org.aspectj</groupId>\n"
-                        + "            <artifactId>aspectjrt</artifactId>\n"
-                        + "            <version>1.9.22.1</version>");
+                """
+                            <groupId>org.aspectj</groupId>
+                            <artifactId>aspectjrt</artifactId>
+                            <version>1.8.7</version>\
+                """,
+                """
+                            <groupId>org.aspectj</groupId>
+                            <artifactId>aspectjrt</artifactId>
+                            <version>1.9.22.1</version>\
+                """);
 
         updatedContent = updatedContent.replace(
-                "            <groupId>org.aspectj</groupId>\n"
-                        + "            <artifactId>aspectjweaver</artifactId>\n"
-                        + "            <version>1.8.7</version>",
-                "            <groupId>org.aspectj</groupId>\n"
-                        + "            <artifactId>aspectjweaver</artifactId>\n"
-                        + "            <version>1.9.22.1</version>");
+                """
+                            <groupId>org.aspectj</groupId>
+                            <artifactId>aspectjweaver</artifactId>
+                            <version>1.8.7</version>\
+                """,
+                """
+                            <groupId>org.aspectj</groupId>
+                            <artifactId>aspectjweaver</artifactId>
+                            <version>1.9.22.1</version>\
+                """);
 
         return updatedContent;
     }
@@ -275,21 +291,23 @@ public class BootstrapForITMojo extends BootstrapMojo {
 
         final String dependenciesEndTag = "    </dependencies>";
         final String jaxbDependencies =
-                "        <dependency>\n"
-                        + "            <groupId>javax.xml.bind</groupId>\n"
-                        + "            <artifactId>jaxb-api</artifactId>\n"
-                        + "            <version>2.3.1</version>\n"
-                        + "        </dependency>\n"
-                        + "        <dependency>\n"
-                        + "            <groupId>com.sun.xml.bind</groupId>\n"
-                        + "            <artifactId>jaxb-impl</artifactId>\n"
-                        + "            <version>2.3.3</version>\n"
-                        + "        </dependency>\n"
-                        + "        <dependency>\n"
-                        + "            <groupId>com.sun.activation</groupId>\n"
-                        + "            <artifactId>javax.activation</artifactId>\n"
-                        + "            <version>1.2.0</version>\n"
-                        + "        </dependency>\n";
+                """
+                        <dependency>
+                            <groupId>javax.xml.bind</groupId>
+                            <artifactId>jaxb-api</artifactId>
+                            <version>2.3.1</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>com.sun.xml.bind</groupId>
+                            <artifactId>jaxb-impl</artifactId>
+                            <version>2.3.3</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>com.sun.activation</groupId>
+                            <artifactId>javax.activation</artifactId>
+                            <version>1.2.0</version>
+                        </dependency>
+                """;
 
         if (content.contains(dependenciesEndTag)) {
             return content.replace(dependenciesEndTag, jaxbDependencies + dependenciesEndTag);
@@ -300,46 +318,54 @@ public class BootstrapForITMojo extends BootstrapMojo {
 
     private String removeLegacySolrDependencies(String content) {
         final String solrCommonDependency =
-                "        <dependency>\n"
-                        + "            <groupId>org.apache.solr</groupId>\n"
-                        + "            <artifactId>solr-common</artifactId>\n"
-                        + "            <version>1.3.0</version>\n"
-                        + "        </dependency>\n";
+                """
+                        <dependency>
+                            <groupId>org.apache.solr</groupId>
+                            <artifactId>solr-common</artifactId>
+                            <version>1.3.0</version>
+                        </dependency>
+                """;
 
         final String solrCoreDependency =
-                "        <dependency>\n"
-                        + "            <groupId>org.apache.solr</groupId>\n"
-                        + "            <artifactId>solr-core</artifactId>\n"
-                        + "            <version>5.3.1</version>\n"
-                        + "        </dependency>\n";
+                """
+                        <dependency>
+                            <groupId>org.apache.solr</groupId>
+                            <artifactId>solr-core</artifactId>
+                            <version>5.3.1</version>
+                        </dependency>
+                """;
 
         return content.replace(solrCommonDependency, "").replace(solrCoreDependency, "");
     }
 
     private String addJpaQueryByExampleExclusions(String content) {
         final String dependencyWithoutExclusions =
-                "        <dependency>\n"
-                        + "            <groupId>com.jaxio</groupId>\n"
-                        + "            <artifactId>jpa-querybyexample</artifactId>\n"
-                        + "            <version>1.0.1</version>\n"
-                        + "        </dependency>\n";
+                """
+                        <dependency>
+                            <groupId>com.jaxio</groupId>
+                            <artifactId>jpa-querybyexample</artifactId>
+                            <version>1.0.1</version>
+                        </dependency>
+                """;
 
         final String dependencyWithExclusions =
-                "        <dependency>\n"
-                        + "            <groupId>com.jaxio</groupId>\n"
-                        + "            <artifactId>jpa-querybyexample</artifactId>\n"
-                        + "            <version>1.0.1</version>\n"
-                        + "            <exclusions>\n"
-                        + "                <exclusion>\n"
-                        + "                    <groupId>org.apache.solr</groupId>\n"
-                        + "                    <artifactId>solr-core</artifactId>\n"
-                        + "                </exclusion>\n"
-                        + "                <exclusion>\n"
-                        + "                    <groupId>org.apache.hadoop</groupId>\n"
-                        + "                    <artifactId>hadoop-annotations</artifactId>\n"
-                        + "                </exclusion>\n"
-                        + "            </exclusions>\n"
-                        + "        </dependency>\n";
+                """
+                        <dependency>
+                            <groupId>com.jaxio</groupId>
+                            <artifactId>jpa-querybyexample</artifactId>
+                            <version>1.0.1</version>
+                            <exclusions>
+                                <exclusion>
+                                    <groupId>org.apache.solr</groupId>
+                                    <artifactId>solr-core</artifactId>
+                                </exclusion>
+                                <exclusion>
+                                    <groupId>org.apache.hadoop</groupId>
+                                    <artifactId>hadoop-annotations</artifactId>
+                                </exclusion>
+                            </exclusions>
+                        </dependency>
+                """;
 
         if (content.contains(dependencyWithoutExclusions)) {
             return content.replace(dependencyWithoutExclusions, dependencyWithExclusions);

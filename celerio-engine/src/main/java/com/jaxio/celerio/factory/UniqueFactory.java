@@ -16,7 +16,6 @@
 
 package com.jaxio.celerio.factory;
 
-import com.jaxio.celerio.Config;
 import com.jaxio.celerio.configuration.database.Index;
 import com.jaxio.celerio.configuration.database.IndexHolder;
 import com.jaxio.celerio.configuration.database.Table;
@@ -25,7 +24,6 @@ import com.jaxio.celerio.model.Entity;
 import com.jaxio.celerio.model.unique.CompositeUnique;
 import com.jaxio.celerio.model.unique.SimpleUnique;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -35,9 +33,6 @@ import static com.google.common.collect.Lists.newArrayList;
 @Service
 @Slf4j
 public class UniqueFactory {
-
-    @Autowired
-    private Config config;
 
     public void setupUniques(Entity entity) {
         Table table = entity.getTable();
@@ -52,24 +47,26 @@ public class UniqueFactory {
                     entity.addUnique(new SimpleUnique(ih.getName(), a));
                 }
             } else if (ih.isComposite()) {
-                List<Attribute> attributes = newArrayList();
-
-                for (Index index : ih.getIndexes()) {
-                    Attribute a = entity.getAttributeByTableAndColumnName(ih.getTableName(), index.getColumnName());
-                    if (a != null) {
-                        attributes.add(a);
-                    }
-                }
-
-                if (attributes.size() == ih.getSize()) {
-                    entity.addUnique(new CompositeUnique(ih.getName(), attributes));
-                } else if (attributes.size() > 0) {
-                    log.warn("Ignoring unique composite index spread accross entity hierarchy:: " + ih.getName());
-                    // TODO: spread accross hierarchy, is it acceptable ?
-                }
+                addCompositeUnique(entity, ih);
             } else {
                 throw new IllegalStateException("Should not happen!");
             }
+        }
+    }
+
+    private void addCompositeUnique(Entity entity, IndexHolder index) {
+        List<Attribute> attributes = newArrayList();
+        for (Index column : index.getIndexes()) {
+            Attribute attribute = entity.getAttributeByTableAndColumnName(index.getTableName(), column.getColumnName());
+            if (attribute != null) {
+                attributes.add(attribute);
+            }
+        }
+        if (attributes.size() == index.getSize()) {
+            entity.addUnique(new CompositeUnique(index.getName(), attributes));
+        } else if (!attributes.isEmpty()) {
+            log.warn("Skipping composite unique index {} because only some of its columns are mapped on {}",
+                    index.getName(), entity.getName());
         }
     }
 }

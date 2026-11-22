@@ -21,18 +21,17 @@ import com.jaxio.celerio.configuration.entity.EnumValue;
 import com.jaxio.celerio.convention.ClassType;
 import com.jaxio.celerio.model.support.EnumNamer;
 import com.jaxio.celerio.util.Labels;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
-
-import static com.jaxio.celerio.util.FallBackUtil.fallBack;
-import static com.jaxio.celerio.util.MiscUtil.toReadableLabel;
 
 /**
  * EnumType is for an enum what {@link Entity} is for an entity.
  */
+@Slf4j
 public class EnumType implements Comparable<EnumType> {
 
-    private EnumConfig enumConfig;
+    private final EnumConfig enumConfig;
     private EnumNamer enumModel;
     private EnumNamer enumItems;
     private EnumNamer enumConverter;
@@ -64,9 +63,13 @@ public class EnumType implements Comparable<EnumType> {
         return enumItems;
     }
 
-    @Deprecated
+    /**
+     * @deprecated Use {@link EnumValue#labels()} in new templates.
+     */
+    @Deprecated(forRemoval = false)
+    @SuppressWarnings("java:S1133") // Existing template packs still call this method.
     public Labels getLabelsByEnumValue(EnumValue ev) {
-        System.out.println("getLabelsByEnumValue is deprecated, please use EnumValue.labels() instead.");
+        log.warn("getLabelsByEnumValue is deprecated. Use EnumValue.labels() instead.");
         return ev.labels();
     }
 
@@ -91,10 +94,7 @@ public class EnumType implements Comparable<EnumType> {
 
     @Override
     public boolean equals(Object other) {
-        if (other instanceof EnumType) {
-            return getModel().getFullType().equals(((EnumType) other).getModel().getFullType());
-        }
-        return false;
+        return other instanceof EnumType enumType && getModel().getFullType().equals(enumType.getModel().getFullType());
     }
 
     @Override

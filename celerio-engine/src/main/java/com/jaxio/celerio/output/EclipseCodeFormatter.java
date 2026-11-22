@@ -26,9 +26,9 @@ import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.ToolFactory;
 import org.eclipse.jdt.core.formatter.CodeFormatter;
 import org.eclipse.jdt.core.formatter.DefaultCodeFormatterConstants;
+import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
-import org.eclipse.text.edits.MalformedTreeException;
 import org.eclipse.text.edits.TextEdit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -43,7 +43,6 @@ import static com.google.common.collect.Maps.newHashMap;
 @Service
 @Slf4j
 public class EclipseCodeFormatter {
-    private Map<String, String> options;
     private CodeFormatter codeFormatter;
     private FormatterEnum formatterChoice;
 
@@ -72,13 +71,7 @@ public class EclipseCodeFormatter {
 
     @SuppressWarnings({"unchecked", "deprecation"})
     public void setFormatterSettings(List<Setting> settings) {
-
-        // // change the option to wrap each enum constant on a new line
-        // options.put(DefaultCodeFormatterConstants.FORMATTER_ALIGNMENT_FOR_ENUM_CONSTANTS,
-        // DefaultCodeFormatterConstants.createAlignmentValue(true,
-        // DefaultCodeFormatterConstants.WRAP_ONE_PER_LINE,
-        // DefaultCodeFormatterConstants.INDENT_ON_COLUMN));
-        //
+        Map<String, String> options;
         if (settings != null) {
             options = newHashMap();
             for (Setting s : settings) {
@@ -113,17 +106,16 @@ public class EclipseCodeFormatter {
                 System.getProperty("line.separator") // line separator
         );
 
+        if (edit == null) {
+            return source;
+        }
         IDocument document = new Document(source);
         try {
             edit.apply(document);
-        } catch (MalformedTreeException e) {
-            e.printStackTrace();
-        } catch (Exception e) {
-            System.out.println("Error for " + source);
-            e.printStackTrace();
+        } catch (BadLocationException | RuntimeException e) {
+            log.warn("Could not apply Eclipse formatter edits", e);
         }
 
-        // display the formatted string on the System out
         return document.get();
     }
 }

@@ -31,14 +31,9 @@ import static com.jaxio.celerio.util.MappedType.*;
 
 @Slf4j
 public class AttributeSetup {
-    private Attribute attribute;
-    /**
-     * example on oracle : should Number(1,0) be treated as a boolean ?
-     * <p>
-     * Technically oracle maps this type to a numeric ranging from 0 to 9.
-     */
-    private boolean applyDecimalWithSizeOneAndNoDigitsAreBooleanConventionEnabled = true;
+    private final Attribute attribute;
 
+    @SuppressWarnings("java:S6832") // The model creates this helper directly for each entity or attribute.
     public AttributeSetup(Attribute attribute) {
         this.attribute = attribute;
     }
@@ -70,21 +65,11 @@ public class AttributeSetup {
     private MappedType getMappedTypeByGlobalMappingConfiguration() {
 
         switch (attribute.getJdbcType().getJdbcType()) {
-            case Types.BIGINT:
-            case Types.DOUBLE:
-            case Types.FLOAT:
-            case Types.INTEGER:
-            case Types.SMALLINT:
-            case Types.TINYINT:
-            case Types.DECIMAL:
-            case Types.NUMERIC:
-            case Types.REAL:
+            case Types.BIGINT, Types.DOUBLE, Types.FLOAT, Types.INTEGER, Types.SMALLINT, Types.TINYINT, Types.DECIMAL, Types.NUMERIC, Types.REAL:
                 // a number, we can continue.
                 return getNumberMappedType();
 
-            case Types.DATE:
-            case Types.TIME:
-            case Types.TIMESTAMP:
+            case Types.DATE, Types.TIME, Types.TIMESTAMP:
                 return getDateMappedType();
             default:
                 // the number mapping does not apply.
@@ -132,7 +117,7 @@ public class AttributeSetup {
     private MappedType getMappedTypeByConvention() {
         MappedType mt = getRawMappedType();
 
-        if (applyDecimalWithSizeOneAndNoDigitsAreBooleanConventionEnabled && mt.isNumeric() && !attribute.isEnum()
+        if (mt.isNumeric() && !attribute.isEnum()
                 && attribute.getColumnConfig().getSize() == 1 && attribute.getColumnConfig().getDecimalDigits() == 0) {
             mt = MappedType.M_BOOLEAN;
             log.info("Applying boolean convention to '" + attribute.getFullName()
@@ -150,62 +135,28 @@ public class AttributeSetup {
                 return M_LONG;
             case Types.BINARY:
                 return M_BYTES;
-            case Types.BIT:
-            case Types.BOOLEAN:
+            case Types.BIT, Types.BOOLEAN:
                 return M_BOOLEAN;
             case Types.BLOB:
                 return M_BLOB;
-            case Types.CLOB:
-            case Types.NCLOB:
-            case Types.SQLXML:
+            case Types.CLOB, Types.NCLOB, Types.SQLXML:
                 return M_CLOB;
             case Types.DATALINK:
                 return M_URL;
             case Types.DATE:
                 return M_UTILDATE;
-            case Types.DISTINCT:
-            case Types.JAVA_OBJECT:
+            case Types.DISTINCT, Types.JAVA_OBJECT:
                 return M_OBJECT;
-            case Types.DOUBLE:
-            case Types.FLOAT:
+            case Types.DOUBLE, Types.FLOAT:
                 return M_DOUBLE;
-            case Types.INTEGER:
-            case Types.SMALLINT:
-            case Types.TINYINT:
+            case Types.INTEGER, Types.SMALLINT, Types.TINYINT:
                 return M_INTEGER;
             case Types.LONGVARBINARY:
                 return M_BYTES;
-            case Types.CHAR:
-            case Types.LONGVARCHAR:
-            case Types.VARCHAR:
-            case Types.LONGNVARCHAR:
-            case Types.NCHAR:
-            case Types.NVARCHAR:
+            case Types.CHAR, Types.LONGVARCHAR, Types.VARCHAR, Types.LONGNVARCHAR, Types.NCHAR, Types.NVARCHAR:
                 return M_STRING;
-            case Types.DECIMAL:
-            case Types.NUMERIC:
-                ColumnConfig column = attribute.getColumnConfig();
-                if (column.getDecimalDigits() > 0) {
-                    if (column.getSize() < 11 && column.getDecimalDigits() < 4) {
-                        return M_DOUBLE;
-                    } else {
-                        return M_BIGDECIMAL;
-                    }
-                } else {
-                    if (column.getSize() == 1 && IS_BOOLEAN_PREFIX.apply(attribute)) {
-                        return M_BOOLEAN;
-                    } else {
-                        if (column.getSize() < 11) {
-                            return M_INTEGER;
-                        } else if (column.getSize() < 19 || attribute.isInPk() || attribute.isInFk()) { // BIG INTEGER IS NOT
-                            // ACCEPTED BY HIBERNATE
-                            // FOR PK
-                            return M_LONG;
-                        } else {
-                            return M_BIGINTEGER;
-                        }
-                    }
-                }
+            case Types.DECIMAL, Types.NUMERIC:
+                return getDecimalMappedType(attribute.getColumnConfig());
             case Types.OTHER:
                 return M_OBJECT;
             case Types.REAL:
@@ -214,8 +165,7 @@ public class AttributeSetup {
                 return M_REF;
             case Types.STRUCT:
                 return M_OBJECT;
-            case Types.TIME:
-            case Types.TIMESTAMP:
+            case Types.TIME, Types.TIMESTAMP:
                 return M_UTILDATE;
             case Types.VARBINARY:
                 if (attribute.getColumnConfig().getSize() == 1) {
@@ -226,7 +176,23 @@ public class AttributeSetup {
             case Types.ROWID:
                 return M_LONG;
             default:
-                throw new RuntimeException("Could not retrieve the type of " + this);
+                throw new IllegalStateException("Could not retrieve the type of " + this);
         }
     }
+    private MappedType getDecimalMappedType(ColumnConfig column) {
+        int size = column.getSize();
+        int digits = column.getDecimalDigits();
+        if (digits > 0) {
+            return size < 11 && digits < 4 ? M_DOUBLE : M_BIGDECIMAL;
+        }
+        if (size == 1 && IS_BOOLEAN_PREFIX.apply(attribute)) {
+            return M_BOOLEAN;
+        }
+        if (size < 11) {
+            return M_INTEGER;
+        }
+        // Hibernate requires a supported numeric type for primary and foreign keys.
+        return size < 19 || attribute.isInPk() || attribute.isInFk() ? M_LONG : M_BIGINTEGER;
+    }
+
 }

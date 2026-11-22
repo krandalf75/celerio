@@ -22,6 +22,10 @@ import static com.google.common.collect.Lists.newArrayList;
 
 @SuppressWarnings("unchecked")
 public class JavaKeywords {
+
+    private JavaKeywords() {
+    }
+
     private static List<String> javaWords = newArrayList("abstract", "assert", "boolean", "break", "byte", "case", "catch", "char", "class", "const",
             "continue", "default", "do", "double", "else", "enum", "extends", "final", "false", "final", "finally", "float", "for", "goto", "if", "implements",
             "import", "instanceof", "int", "interface", "long", "native", "new", "null", "package", "private", "protected", "public", "return", "short",

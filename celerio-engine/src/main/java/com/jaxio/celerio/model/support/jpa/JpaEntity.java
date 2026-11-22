@@ -18,8 +18,6 @@ package com.jaxio.celerio.model.support.jpa;
 
 import com.jaxio.celerio.configuration.TrueFalse;
 import com.jaxio.celerio.configuration.database.Table;
-import com.jaxio.celerio.configuration.entity.CacheConfig;
-import com.jaxio.celerio.configuration.entity.CacheConfigGetter;
 import com.jaxio.celerio.configuration.entity.ColumnConfig;
 import com.jaxio.celerio.model.Attribute;
 import com.jaxio.celerio.model.Unique;
@@ -58,7 +56,7 @@ public class JpaEntity extends AbstractEntitySpi {
     public List<String> getAnnotations() {
         AnnotationBuilder ab = new AnnotationBuilder();
         ab.add(getEntityAnnotation());
-        ab.add(getHibernateCacheAnnotation()); // TODO: move to cache entity spi ?
+        ab.add(getHibernateCacheAnnotation());
         ab.add(getTableAnnotation());
         ab.add(getInheritanceAnnotations());
         ab.add(getDiscriminatorColumnAnnotation());
@@ -87,7 +85,7 @@ public class JpaEntity extends AbstractEntitySpi {
                 }
             }
         }
-        if (attributesOverrides.size() == 0) {
+        if (attributesOverrides.isEmpty()) {
             return "";
         } else if (attributesOverrides.size() == 1) {
             return appendComment(attributesOverrides.iterator().next());
@@ -120,7 +118,7 @@ public class JpaEntity extends AbstractEntitySpi {
 
     public String getSecondaryTableAnnotations() {
         Set<Table> secondaryTables = getSecondaryTables();
-        if (secondaryTables.size() == 0) {
+        if (secondaryTables.isEmpty()) {
             return "";
         } else if (secondaryTables.size() == 1) {
             return appendComment(getSecondaryTableAnnotation(secondaryTables.iterator().next()));
@@ -179,13 +177,7 @@ public class JpaEntity extends AbstractEntitySpi {
     private Set<Table> getSecondaryTables() {
         Set<Table> result = newHashSet();
         for (ColumnConfig cc : entity.getEntityConfig().getColumnConfigs()) {
-            // skip ignored attributes
-            if (cc.hasTrueIgnore()) {
-                continue;
-            }
-
-            // skip same table
-            if (entity.getTableName().equalsIgnoreCase(cc.getTableName())) {
+            if (cc.hasTrueIgnore() || entity.getTableName().equalsIgnoreCase(cc.getTableName())) {
                 continue;
             }
 
@@ -238,12 +230,7 @@ public class JpaEntity extends AbstractEntitySpi {
 
         String cacheAnnotation = JpaConfigHelper.getCacheAnnotation(this, //
                 entity.getEntityConfig(), //
-                new CacheConfigGetter() {
-                    @Override
-                    public CacheConfig getCacheConfig() {
-                        return entity.getConfig().getCelerio().getConfiguration().getDefaultEntityCacheConfig();
-                    }
-                });
+                () -> entity.getConfig().getCelerio().getConfiguration().getDefaultEntityCacheConfig());
         return appendComment(cacheAnnotation);
     }
 
@@ -288,22 +275,7 @@ public class JpaEntity extends AbstractEntitySpi {
     private String getUniqueConstraints() {
         List<String> constraints = getTableUniqueConstraints();
 
-        if (constraints.isEmpty()) {
-            return "";
-        } else {
-            String constraintsAsString = "uniqueConstraints = {";
-            boolean first = true;
-            for (String constraint : constraints) {
-                if (!first) {
-                    constraintsAsString += ", ";
-                } else {
-                    first = false;
-                }
-                constraintsAsString += constraint;
-            }
-            constraintsAsString += "}";
-            return constraintsAsString;
-        }
+        return constraints.isEmpty() ? "" : "uniqueConstraints = {" + String.join(", ", constraints) + "}";
     }
 
     private List<String> getTableUniqueConstraints() {
@@ -316,27 +288,19 @@ public class JpaEntity extends AbstractEntitySpi {
 
     private String buildConstraint(CompositeUnique compositeUnique) {
         addImport("javax.persistence.UniqueConstraint");
-        String ret = "@UniqueConstraint(";
+        StringBuilder annotation = new StringBuilder("@UniqueConstraint(");
         if (isNotBlank(compositeUnique.getName())) {
-            ret += "name=\"" + compositeUnique.getName() + "\", ";
+            annotation.append("name=\"").append(compositeUnique.getName()).append("\", ");
         }
-        ret += "columnNames = {";
-        boolean first = true;
-        for (Attribute uniqueAttribute : compositeUnique.getAttributes()) {
-            if (!first) {
-                ret += ", ";
-            } else {
-                first = false;
-            }
-            ret += "\"" + escapeSql(uniqueAttribute.getColumnName()) + "\"";
-        }
-        ret += "})";
-        return ret;
+        List<String> columns = compositeUnique.getAttributes().stream()
+                .map(attribute -> "\"" + escapeSql(attribute.getColumnName()) + "\"")
+                .toList();
+        return annotation.append("columnNames = {").append(String.join(", ", columns)).append("})").toString();
     }
 
     private void appendAttribute(StringBuffer ret, String attribute) {
         if (isNotBlank(attribute)) {
-            if (ret.length() > 0) {
+            if (!ret.isEmpty()) {
                 ret.append(", ");
             }
             ret.append(attribute);

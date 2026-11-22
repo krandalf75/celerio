@@ -28,7 +28,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Constraint(validatedBy = {JavaWordValidator.class})
 @Target({METHOD, FIELD, CONSTRUCTOR, PARAMETER, ANNOTATION_TYPE})
 @Retention(RUNTIME)
-@Pattern(regexp = "(|[\\p{Alpha}_]+[\\p{XDigit}_]*)")
+@Pattern(regexp = "(?:[\\p{Alpha}_]++[\\p{XDigit}_]*)?")
 public @interface JavaWord {
     boolean allowEmpty() default true;
 

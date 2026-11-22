@@ -82,17 +82,16 @@ public enum CommentStyle {
         return decorate(lines, "");
     }
 
-    public String decorate(Iterable<String> lines, String preprend) {
+    public String decorate(Iterable<String> lines, String prepend) {
         if (lines == null || isEmpty(lines)) {
             return "";
         }
-        String s = preprend + start + "\n";
+        StringBuilder result = new StringBuilder();
+        result.append(prepend).append(start).append('\n');
         for (String comment : lines) {
-            s += preprend + startLine + " " + comment.trim() + "\n";
+            result.append(prepend).append(startLine).append(' ').append(comment.trim()).append('\n');
         }
-        s += preprend + end + "\n";
-
-        return s;
+        return result.append(prepend).append(end).append('\n').toString();
     }
 
     public static CommentStyle fromFilename(String filename) {

@@ -21,9 +21,11 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.filefilter.FileFilterUtils;
 import org.apache.commons.io.filefilter.IOFileFilter;
 import org.apache.commons.io.filefilter.OrFileFilter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.util.Collection;
 import java.util.Set;
 
@@ -32,18 +34,20 @@ import static com.google.common.collect.Sets.newTreeSet;
 import static org.apache.commons.io.IOUtils.closeQuietly;
 
 @Service
+@Slf4j
 public class IOUtil {
 
     /**
      * comes from org.codehaus.plexus.util.DirectoryScanner
      */
+    @SuppressWarnings("java:S2386") // Keep the public suffix array used by existing callers.
     public static final String[] DEFAULT_EXCLUDES_SUFFIXES = {"~", "bak", "old"};
 
     /**
      * Write to the outputstream the bytes read from the input stream.
      */
     public int inputStreamToOutputStream(InputStream is, OutputStream os) throws IOException {
-        byte buffer[] = new byte[1024 * 100]; // 100kb
+        byte[] buffer = new byte[1024 * 100]; // 100kb
         int len = -1;
         int total = 0;
 
@@ -122,25 +126,18 @@ public class IOUtil {
      * @return the inputstream as a string
      */
     public String inputStreamToString(InputStream is, String charset) throws IOException {
-        InputStreamReader isr = null;
-        if (null == charset) {
-            isr = new InputStreamReader(is);
-        } else {
-            isr = new InputStreamReader(is, charset);
+        try (InputStreamReader reader = charset == null ? new InputStreamReader(is) : new InputStreamReader(is, charset)) {
+            StringWriter writer = new StringWriter();
+            reader.transferTo(writer);
+            return writer.toString();
         }
-        StringWriter sw = new StringWriter();
-        int c = -1;
-        while ((c = isr.read()) != -1) {
-            sw.write(c);
-        }
-        isr.close();
-        return sw.getBuffer().toString();
     }
 
     public boolean contentEquals(File file1, File file2) {
-        try {
-            return contentEquals(new FileReader(file1), new FileReader(file2));
-        } catch (Exception e) {
+        try (FileReader first = new FileReader(file1);
+             FileReader second = new FileReader(file2)) {
+            return IOUtils.contentEquals(first, second);
+        } catch (Exception _) {
             return false;
         }
     }
@@ -152,7 +149,7 @@ public class IOUtil {
     public boolean contentEquals(Reader reader1, Reader reader2) {
         try {
             return IOUtils.contentEquals(reader1, reader2);
-        } catch (Exception e) {
+        } catch (Exception _) {
             return false;
         } finally {
             closeQuietly(reader1);
@@ -169,11 +166,8 @@ public class IOUtil {
     public boolean isParentAnEmptyDirectory(File file) {
         File parent = file.getParentFile();
 
-        if (parent != null && parent.exists() && parent.isDirectory() && parent.list().length == 0) {
-            return true;
-        }
-
-        return false;
+        String[] entries = parent == null ? null : parent.list();
+        return entries != null && entries.length == 0;
     }
 
     /**
@@ -192,12 +186,13 @@ public class IOUtil {
      */
     public void pruneEmptyDirs(File targetFile) {
         while (isParentAnEmptyDirectory(targetFile)) {
+            File parent = targetFile.getParentFile();
             try {
-                targetFile.getParentFile().delete();
-                targetFile = targetFile.getParentFile();
-            } catch (Exception e) {
-                //
+                Files.delete(parent.toPath());
+            } catch (IOException | SecurityException _) {
+                return;
             }
+            targetFile = parent;
         }
     }
 
@@ -279,7 +274,7 @@ public class IOUtil {
         // create the parent folder if needed
         try {
             file.getParentFile().mkdirs();
-        } catch (Exception e) {
+        } catch (Exception _) {
             //
         }
     }
@@ -299,15 +294,15 @@ public class IOUtil {
             if (tempFile != null && tempFile.exists()) {
                 FileUtils.forceDelete(tempFile);
             }
-        } catch (Throwable t) {
-            t.printStackTrace();
+        } catch (Exception e) {
+            log.warn("Could not delete " + tempFile, e);
         }
     }
 
     public boolean fileExists(String filename) {
         try {
             return new File(filename).exists();
-        } catch (Exception e) {
+        } catch (Exception _) {
             return false;
         }
     }
@@ -316,8 +311,8 @@ public class IOUtil {
         try {
             forceDelete(to);
             FileUtils.moveFile(from, to);
-        } catch (Throwable t) {
-            t.printStackTrace();
+        } catch (Exception e) {
+            log.warn("Could not move " + from + " to " + to, e);
         }
     }
 }

@@ -37,6 +37,8 @@ import static com.jaxio.celerio.configuration.entity.AssociationDirection.UNIDIR
 import static org.apache.commons.lang.WordUtils.capitalize;
 
 public class Configuration {
+    private static final boolean DEFAULT_ENABLE_ONE_TO_VIRTUAL_ONE = false;
+
     protected CelerioTemplateContext celerioTemplateContext = new CelerioTemplateContext();
     protected List<Pack> packs = newArrayList();
     protected List<Module> modules = newArrayList();
@@ -58,7 +60,6 @@ public class Configuration {
     protected Generation generation = new Generation();
     protected Restriction restriction = new Restriction();
     protected AssociationDirection associationDirection = UNIDIRECTIONAL;
-    private Boolean enableOneToVirtualOne = false;
 
     @Getter
     @Setter
@@ -212,12 +213,12 @@ public class Configuration {
     public boolean hasTemplate(String packName, String templateName) {
         if (hasPack(packName) && isPackEnabled(packName)) {
             Pack pack = getPackByName(packName);
-            if (pack.getTemplates().size() > 0) {
+            if (!pack.getTemplates().isEmpty()) {
                 return pack.hasTemplate(templateName);
             }
         }
 
-        if (getTemplates().size() > 0) {
+        if (!getTemplates().isEmpty()) {
             return hasTemplate(templateName);
         } else {
             return true;
@@ -417,7 +418,7 @@ public class Configuration {
      * Enable one to virtual one, which is a one to one that uses a Collection. This method allows for performance enhancement in hibernate using lazy loading.
      */
     public Boolean getEnableOneToVirtualOne() {
-        return enableOneToVirtualOne;
+        return DEFAULT_ENABLE_ONE_TO_VIRTUAL_ONE;
     }
 
     /*

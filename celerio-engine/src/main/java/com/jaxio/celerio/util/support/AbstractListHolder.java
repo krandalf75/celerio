@@ -41,7 +41,7 @@ public abstract class AbstractListHolder<T extends Named> implements ListHolder<
     private List<T> cachedResult;
     private boolean isCacheEnabled = true;
     private String sortProperty;
-    private Map<String, SimpleListHolder<T>> cache = newHashMap();
+    private final Map<String, SimpleListHolder<T>> cache = newHashMap();
 
     /**
      * The source to use to construct the List.
@@ -194,11 +194,11 @@ public abstract class AbstractListHolder<T extends Named> implements ListHolder<
     }
 
     private String getCacheKey(String... namesToExclude) {
-        String key = "-";
+        StringBuilder key = new StringBuilder("-");
         for (String name : namesToExclude) {
-            key += name + "-";
+            key.append(name).append('-');
         }
-        return key;
+        return key.toString();
     }
 
     protected void sort(List<T> listToSort) {

@@ -16,7 +16,6 @@
 
 package com.jaxio.celerio.template;
 
-import com.google.common.base.Predicate;
 import com.jaxio.celerio.Brand;
 import com.jaxio.celerio.Config;
 import com.jaxio.celerio.configuration.Module;
@@ -41,34 +40,39 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import static com.google.common.base.Predicates.and;
-import static com.google.common.base.Predicates.not;
-import static com.google.common.collect.Iterables.filter;
-import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Lists.reverse;
 import static com.google.common.collect.Maps.newHashMap;
 
 @Service
 @Slf4j
 public class TemplateEngine {
+
+    private static final String ENTITY_CONTEXT_KEY = "entity";
     private static final String DASH_LINE = "-----------------------------------------------------------------------";
 
-    @Autowired
-    private ApplicationContext applicationContext;
+    private final ApplicationContext applicationContext;
+
+    private final Config config;
+
+    private final ContentWriter contentWriter;
+
+    private final PackLoader packLoader;
 
     @Autowired
-    private Config config;
-
-    @Autowired
-    private ContentWriter contentWriter;
-
-    @Autowired
-    private PackLoader packLoader;
+    public TemplateEngine(ApplicationContext applicationContext,
+                          Config config,
+                          ContentWriter contentWriter,
+                          PackLoader packLoader) {
+        this.applicationContext = applicationContext;
+        this.config = config;
+        this.contentWriter = contentWriter;
+        this.packLoader = packLoader;
+    }
 
     private Map<String, Object> getGlobalContext() {
         Map<String, Object> context = newHashMap();
@@ -108,49 +112,13 @@ public class TemplateEngine {
 
     public void produce(Project project, boolean bootstrapOnly) throws Exception {
 
-        if (config.getCelerio().getConfiguration().getModules().isEmpty()) {
-            log.info("No active module");
-        } else {
-            log.info("Active modules");
-            for (Module module : config.getCelerio().getConfiguration().getModules()) {
-                log.info(" . " + module);
-            }
-        }
-
         List<TemplatePack> templatePacks = packLoader.getTemplatePacks();
-        if (log.isInfoEnabled()) {
-            log.info(DASH_LINE);
-            log.info("Working with " + templatePacks.size() + " templates pack" + s(templatePacks) + ".");
-            for (TemplatePack templatePack : templatePacks) {
-                log.info(". " + templatePack.getName() + " (" + templatePack.getTemplateNames().size() + " resource" + s(templatePack.getTemplateNames()) + ")");
-
-                Pack configPack = config.getCelerio().getConfiguration().getPackByName(templatePack.getName());
-                if (configPack != null) {
-                    log.info("        Configuration found");
-                    for (Pattern p : configPack.getTemplates()) {
-                        log.info("        - include: " + p.isInclude() + ", template pattern: " + p.getPattern());
-                    }
-                    for (Pattern p : configPack.getFilenames()) {
-                        log.info("        - include: " + p.isInclude() + ", filename pattern: " + p.getPattern());
-                    }
-                }
-            }
-        }
+        logTemplateConfiguration(templatePacks);
 
         config.getOutputResult().open();
 
         // producing bootstrap first
-        List<TemplatePack> packReversed = reverse(templatePacks);
-        for (TemplatePack templatePack : packReversed) {
-            if (getTemplateNames(templatePack, TemplateType.bootstrap).isEmpty()) {
-                continue;
-            }
-
-            log.info(DASH_LINE);
-            log.info("Template Pack (bootstrap) " + templatePack.getName());
-            produceBootstrap(project, templatePack);
-            break;
-        }
+        produceBootstrapTemplates(templatePacks);
 
         if (bootstrapOnly) {
             return;
@@ -160,7 +128,7 @@ public class TemplateEngine {
             log.info(DASH_LINE);
             log.info("Template Pack " + templatePack.getName());
 
-            produceProject(project, templatePack);
+            produceGlobalTemplates(templatePack, TemplateType.project);
             produceEntities(project, templatePack);
             produceCompositePk(project, templatePack);
             produceAttributes(project, templatePack);
@@ -170,6 +138,52 @@ public class TemplateEngine {
         }
 
         config.getOutputResult().close();
+    }
+
+    private void logTemplateConfiguration(List<TemplatePack> templatePacks) {
+        if (config.getCelerio().getConfiguration().getModules().isEmpty()) {
+            log.info("No active module");
+        } else {
+            log.info("Active modules");
+            for (Module module : config.getCelerio().getConfiguration().getModules()) {
+                log.info(" . " + module);
+            }
+        }
+
+        if (!log.isInfoEnabled()) {
+            return;
+        }
+        log.info(DASH_LINE);
+        log.info("Working with " + templatePacks.size() + " templates pack" + s(templatePacks) + ".");
+        for (TemplatePack templatePack : templatePacks) {
+            var names = templatePack.getTemplateNames();
+            log.info(". " + templatePack.getName() + " (" + names.size() + " resource" + s(names) + ")");
+            logPackConfiguration(config.getCelerio().getConfiguration().getPackByName(templatePack.getName()));
+        }
+    }
+
+    private void logPackConfiguration(Pack pack) {
+        if (pack == null) {
+            return;
+        }
+        log.info("        Configuration found");
+        for (Pattern pattern : pack.getTemplates()) {
+            log.info("        - include: " + pattern.isInclude() + ", template pattern: " + pattern.getPattern());
+        }
+        for (Pattern pattern : pack.getFilenames()) {
+            log.info("        - include: " + pattern.isInclude() + ", filename pattern: " + pattern.getPattern());
+        }
+    }
+
+    private void produceBootstrapTemplates(List<TemplatePack> templatePacks) throws Exception {
+        for (TemplatePack templatePack : reverse(templatePacks)) {
+            if (!getTemplateNames(templatePack, TemplateType.bootstrap).isEmpty()) {
+                log.info(DASH_LINE);
+                log.info("Template Pack (bootstrap) " + templatePack.getName());
+                produceGlobalTemplates(templatePack, TemplateType.bootstrap);
+                return;
+            }
+        }
     }
 
     private void produceStaticTemplates(TemplatePack templatePack) throws Exception {
@@ -203,38 +217,32 @@ public class TemplateEngine {
         }
     }
 
-    private void produceProject(Project project, TemplatePack templatePack) throws Exception, IOException {
-        for (String templateName : getTemplateNames(templatePack, TemplateType.project)) {
+    private void produceGlobalTemplates(TemplatePack templatePack, TemplateType type) throws Exception {
+        for (String templateName : getTemplateNames(templatePack, type)) {
             produce(getGlobalContext(), templatePack, templateName);
         }
     }
 
-    private void produceBootstrap(Project project, TemplatePack templatePack) throws Exception, IOException {
-        for (String templateName : getTemplateNames(templatePack, TemplateType.bootstrap)) {
-            produce(getGlobalContext(), templatePack, templateName);
-        }
-    }
-
-    private void produceEntities(Project project, TemplatePack templatePack) throws Exception, IOException {
+    private void produceEntities(Project project, TemplatePack templatePack) throws Exception {
         for (String templateName : getTemplateNames(templatePack, TemplateType.entity)) {
             for (Entity entity : project.getCurrentEntities()) {
                 if (entity.isManyToManyJoinEntity() || entity.isSkip()) {
                     continue;
                 }
                 Map<String, Object> context = getGlobalContext();
-                context.put("entity", entity);
+                context.put(ENTITY_CONTEXT_KEY, entity);
                 context.put("primaryKey", entity.getPrimaryKey());
                 produce(context, templatePack, templateName);
             }
         }
     }
 
-    private void produceCompositePk(Project project, TemplatePack templatePack) throws Exception, IOException {
+    private void produceCompositePk(Project project, TemplatePack templatePack) throws Exception {
         for (String templateName : getTemplateNames(templatePack, TemplateType.compositePrimaryKey)) {
             for (Entity entity : project.getRootEntities().getList()) {
                 if (entity.hasCompositePk() && !entity.isManyToManyJoinEntity() && !entity.isSkip()) {
                     Map<String, Object> context = getGlobalContext();
-                    context.put("entity", entity);
+                    context.put(ENTITY_CONTEXT_KEY, entity);
                     context.put("primaryKey", entity.getPrimaryKey());
                     produce(context, templatePack, templateName);
                 }
@@ -242,7 +250,7 @@ public class TemplateEngine {
         }
     }
 
-    private void produceEnums(Project project, TemplatePack templatePack) throws Exception, IOException {
+    private void produceEnums(Project project, TemplatePack templatePack) throws Exception {
         for (String templateName : getTemplateNames(templatePack, TemplateType.enumeration)) {
             for (EnumType enumType : project.getEnumTypes()) {
                 Map<String, Object> context = getGlobalContext();
@@ -252,12 +260,12 @@ public class TemplateEngine {
         }
     }
 
-    private void produceAttributes(Project project, TemplatePack templatePack) throws Exception, IOException {
+    private void produceAttributes(Project project, TemplatePack templatePack) throws Exception {
         for (String templateName : getTemplateNames(templatePack, TemplateType.attribute)) {
             for (Entity entity : project.getCurrentEntities()) {
                 for (Attribute attribute : entity.getCurrentAttributes()) {
                     Map<String, Object> context = getGlobalContext();
-                    context.put("entity", entity);
+                    context.put(ENTITY_CONTEXT_KEY, entity);
                     context.put("attribute", attribute);
                     produce(context, templatePack, templateName);
                 }
@@ -273,25 +281,40 @@ public class TemplateEngine {
         execution.write(config.getOutputResult(), context, templatePack, template);
     }
 
-    private List<String> getTemplateNames(TemplatePack templatePack, final TemplateType templateType) {
-        Predicate<String> matcher = and(new VelocityNameMatcher(templateType), new TemplateMatcher(templatePack));
-        matcher = and(matcher, not(new CelerioTemplateExampleMatcher()));
-        return newArrayList(filter(templatePack.getTemplateNames(), matcher));
+    private List<String> getTemplateNames(TemplatePack templatePack, TemplateType templateType) {
+        String velocityPattern = templateType.getVelocityPattern();
+        return templatePack.getTemplateNames().stream()
+                .filter(name -> name.contains(velocityPattern))
+                .filter(name -> isTemplateEnabled(templatePack, name))
+                .filter(name -> !isCelerioExample(name))
+                .toList();
     }
 
     private List<String> getStaticTemplateNames(TemplatePack templatePack) {
-        Predicate<String> matcher = and(new TemplateMatcher(templatePack), not(new CelerioTemplateExampleMatcher()));
-        for (TemplateType templateType : TemplateType.values()) {
-            matcher = and(matcher, not(new VelocityNameMatcher(templateType)));
-        }
-        return newArrayList(filter(templatePack.getTemplateNames(), matcher));
+        List<String> velocityPatterns = Arrays.stream(TemplateType.values()).map(TemplateType::getVelocityPattern).toList();
+        return templatePack.getTemplateNames().stream()
+                .filter(name -> isTemplateEnabled(templatePack, name))
+                .filter(name -> !isCelerioExample(name))
+                .filter(name -> velocityPatterns.stream().noneMatch(name::contains))
+                .toList();
     }
 
     private List<String> getCelerioExampleTemplateNames(TemplatePack templatePack) {
-        Predicate<String> matcher = and(new TemplateMatcher(templatePack), new CelerioTemplateExampleMatcher());
-        return newArrayList(filter(templatePack.getTemplateNames(), matcher));
+        return templatePack.getTemplateNames().stream()
+                .filter(name -> isTemplateEnabled(templatePack, name))
+                .filter(this::isCelerioExample)
+                .toList();
     }
 
+    private boolean isTemplateEnabled(TemplatePack templatePack, String name) {
+        return config.getCelerio().getConfiguration().hasTemplate(templatePack.getName(), name);
+    }
+
+    private boolean isCelerioExample(String path) {
+        return path.contains("src\\main\\celerio-example") || path.startsWith("src/main/celerio-example");
+    }
+
+    @SuppressWarnings("java:S115") // Keep the names used by template packs and plugin callers.
     public enum TemplateType {
         bootstrap("boot"), //
         project("p"), //
@@ -299,7 +322,7 @@ public class TemplateEngine {
         attribute("a"), //
         enumeration("enum"), //
         compositePrimaryKey("cpk");
-        private String pattern;
+        private final String pattern;
 
         TemplateType(String pattern) {
             this.pattern = pattern;
@@ -310,41 +333,4 @@ public class TemplateEngine {
         }
     }
 
-    private class VelocityNameMatcher implements Predicate<String> {
-        private TemplateType type;
-
-        public VelocityNameMatcher(TemplateType type) {
-            this.type = type;
-        }
-
-        @Override
-        public boolean apply(String input) {
-            return input.indexOf(type.getVelocityPattern()) != -1;
-        }
-    }
-
-    private class TemplateMatcher implements Predicate<String> {
-        private TemplatePack templatePack;
-
-        public TemplateMatcher(TemplatePack templatePack) {
-            this.templatePack = templatePack;
-        }
-
-        @Override
-        public boolean apply(String templateName) {
-            if (!config.getCelerio().getConfiguration().hasTemplate(templatePack.getName(), templateName)) {
-                // log.debug("Skipping template '" + templateName + "'. Reason: requested in template pattern");
-                return false;
-            }
-            return true;
-        }
-    }
-
-    // celerio templates that should be copied as is...
-    private class CelerioTemplateExampleMatcher implements Predicate<String> {
-        @Override
-        public boolean apply(String relativePathAndTemplateName) {
-            return relativePathAndTemplateName.contains("src\\main\\celerio-example") || relativePathAndTemplateName.startsWith("src/main/celerio-example");
-        }
-    }
 }

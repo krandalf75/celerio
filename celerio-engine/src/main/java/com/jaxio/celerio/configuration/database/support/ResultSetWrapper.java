@@ -26,17 +26,17 @@ import java.sql.SQLException;
  * Once we know it works without label (it should), we can remove this code and use col number directly.
  */
 public abstract class ResultSetWrapper {
-    private ResultSet rs;
-    private boolean useLabel;
+    private final ResultSet rs;
+    private final boolean useLabel;
 
-    public ResultSetWrapper(ResultSet rs, boolean useLabel) {
+    protected ResultSetWrapper(ResultSet rs, boolean useLabel) {
         this.rs = rs;
         this.useLabel = useLabel;
     }
 
-    abstract protected int toInt(String label);
+    protected abstract int toInt(String label);
 
-    final public String getString(String label) throws SQLException {
+    public final String getString(String label) throws SQLException {
         if (useLabel) {
             return rs.getString(label);
         } else {
@@ -44,7 +44,7 @@ public abstract class ResultSetWrapper {
         }
     }
 
-    final public int getInt(String label) throws SQLException {
+    public final int getInt(String label) throws SQLException {
         if (useLabel) {
             return rs.getInt(label);
         } else {
@@ -52,7 +52,7 @@ public abstract class ResultSetWrapper {
         }
     }
 
-    final public boolean getBoolean(String label) throws SQLException {
+    public final boolean getBoolean(String label) throws SQLException {
         if (useLabel) {
             return rs.getBoolean(label);
         } else {

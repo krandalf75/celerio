@@ -36,11 +36,15 @@ import org.springframework.stereotype.Service;
  * </ul>
  */
 public class AttributeFactory {
-    @Autowired
-    private ApplicationContext applicationContext;
+    private final ApplicationContext applicationContext;
+
+    private final ColumnConfigFactory columnConfigFactory;
 
     @Autowired
-    private ColumnConfigFactory columnConfigFactory;
+    public AttributeFactory(ApplicationContext applicationContext, ColumnConfigFactory columnConfigFactory) {
+        this.applicationContext = applicationContext;
+        this.columnConfigFactory = columnConfigFactory;
+    }
 
     public Attribute build(Entity entity, Table table, Column column) {
         ColumnConfig columnConfig = columnConfigFactory.buildColumnConfig(entity, table, column);
@@ -55,6 +59,6 @@ public class AttributeFactory {
     }
 
     public void setup(Attribute attribute) {
-        // columnConfig.setIsFormField(fallBack(columnConfig.isFormField(), AttributePredicates.VERSION.apply(attribute)));
+        // Extension hook for factories that finalize attributes after assembly.
     }
 }

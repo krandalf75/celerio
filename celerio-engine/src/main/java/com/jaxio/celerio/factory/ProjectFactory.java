@@ -18,11 +18,8 @@ package com.jaxio.celerio.factory;
 
 import com.jaxio.celerio.Config;
 import com.jaxio.celerio.ConfigurationCheck;
-import com.jaxio.celerio.aspects.ForbiddenWhenBuildingAspect;
 import com.jaxio.celerio.configuration.*;
 import com.jaxio.celerio.configuration.convention.*;
-import com.jaxio.celerio.configuration.database.Table;
-import com.jaxio.celerio.configuration.entity.EntityConfig;
 import com.jaxio.celerio.configuration.entity.EnumConfig;
 import com.jaxio.celerio.configuration.entity.EnumType;
 import com.jaxio.celerio.configuration.entity.EnumValue;
@@ -62,6 +59,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
 import static com.google.common.collect.Lists.newArrayList;
@@ -73,59 +71,29 @@ import static com.jaxio.celerio.util.StringUtil.getFirstCharacterUppered;
 public class ProjectFactory {
     public static final String DEFAULT_ENTITY_ROOTPACKAGE = "com.jaxio.demo";
 
-    @Autowired
-    private Config config;
+    private final Config config;
+    private final EntityFactory entityFactory;
+    private final InheritanceFactory inheritanceFactory;
+    private final EntityModelAssembler entityModelAssembler;
+    private final ConfigurationCheck configurationCheck;
+    private final BuildInfo buildInfo;
+    private final PackLoader packLoader;
 
-    @Autowired
-    private EntityFactory entityFactory;
-
-    @Autowired
-    private RelationFactory relationFactory;
-
-    @Autowired
-    private EntityConfigFactory entityConfigFactory;
-
-    @Autowired
-    private PrimaryKeyFactory primaryKeyFactory;
-
-    @Autowired
-    private UniqueFactory uniqueFactory;
-
-    @Autowired
-    private BusinessKeyFactory businessKeyFactory;
-
-    @Autowired
-    private ForeignKeyHintsFactory foreignKeyHintsFactory;
-
-    @Autowired
-    private InheritanceFactory inheritanceFactory;
-
-    @Autowired
-    private ConfigurationCheck configurationCheck;
-
-    @Autowired
-    private ForbiddenWhenBuildingAspect forbiddenWhenBuildingAspect;
-
-    @Autowired
-    private BuildInfo buildInfo;
-
-    @Autowired
-    private PackLoader packLoader;
     // -----------------------------------------------
     // SPI - Service Provider Interface
     // -----------------------------------------------
-    private List<Class<? extends ProjectSpi>> projectSpis = newArrayList();
-    private List<Class<? extends EntitySpi>> entitySpis = newArrayList();
-    private List<Class<? extends AttributeSpi>> attributeSpis = newArrayList();
-    private List<Class<? extends RelationSpi>> relationSpis = newArrayList();
-    private List<ProjectSpi> defaultProjectSpis = newArrayList();
-    private List<EntitySpi> defaultEntitySpis = newArrayList( //
+    private final List<Class<? extends ProjectSpi>> projectSpis = newArrayList();
+    private final List<Class<? extends EntitySpi>> entitySpis = newArrayList();
+    private final List<Class<? extends AttributeSpi>> attributeSpis = newArrayList();
+    private final List<Class<? extends RelationSpi>> relationSpis = newArrayList();
+    private final List<ProjectSpi> defaultProjectSpis = newArrayList();
+    private final List<EntitySpi> defaultEntitySpis = newArrayList( //
             new JpaEntity(), //
             new CustomEntity(), //
             new SearchEntity(), //
             new SpringMVCEntity() //
     );
-    private List<AttributeSpi> defaultAttributeSpis = newArrayList( //
+    private final List<AttributeSpi> defaultAttributeSpis = newArrayList( //
             new CustomAttribute(), //
             new FormatterAttribute(), //
             new SearchAttribute(), //
@@ -136,7 +104,7 @@ public class ProjectFactory {
             new JQueryAttribute(), //
             new ValuesAttribute()
     );
-    private List<RelationSpi> defaultRelationSpis = newArrayList( //
+    private final List<RelationSpi> defaultRelationSpis = newArrayList( //
             new ValidationRelation(), //
             new JpaToOneRelation(), //
             new JpaOneToManyRelation(), //
@@ -144,6 +112,19 @@ public class ProjectFactory {
             new JpaIntermediateManyToOneRelation(), //
             new JpaIntermediateOneToManyRelation() //
     );
+
+    @Autowired
+    public ProjectFactory(Config config, EntityFactory entityFactory, InheritanceFactory inheritanceFactory,
+                          EntityModelAssembler entityModelAssembler, ConfigurationCheck configurationCheck,
+                          BuildInfo buildInfo, PackLoader packLoader) {
+        this.config = config;
+        this.entityFactory = entityFactory;
+        this.inheritanceFactory = inheritanceFactory;
+        this.entityModelAssembler = entityModelAssembler;
+        this.configurationCheck = configurationCheck;
+        this.buildInfo = buildInfo;
+        this.packLoader = packLoader;
+    }
 
     public void init() {
         Assert.notNull(config.getOutputResult(), "Output result is not defined");
@@ -158,44 +139,30 @@ public class ProjectFactory {
         setCelerioVersion(celerio, buildInfo);
         updateNamingConventions(celerio.getConfiguration());
 
-        celerio.setEntityConfigs(entityConfigFactory.filterEntityConfigs(celerio.getEntityConfigs()));
-
-        log.info("Checking configuration consistency...");
-        entityConfigFactory.assertEntityConfigListIsConsistent(celerio.getEntityConfigs());
+        entityFactory.prepareConfiguredEntities(celerio);
 
         log.info("Processing enums...");
         buildSharedEnums(celerio);
 
         log.info("Processing entities...");
-        buildEntities(project, celerio.getEntityConfigs());
+        entityFactory.buildEntities(project, celerio.getEntityConfigs());
 
         log.info("Processing inheritance...");
         inheritanceFactory.wireEntityHierarchies();
 
-        log.info("Processing uniques/pk/fk...");
-        setupEntities();
-
-        forbiddenWhenBuildingAspect.buildingDone();
-
-        log.info("Processing relations...");
-        setupRelations();
-
-        log.info("Processing business keys...");
-        setupBusinessKeys();
+        entityModelAssembler.assemble(project);
 
         log.info("Processing global validation...");
         globalValidation();
 
         log.info("Applying conventions...");
-        conventions(project, config.getCelerio().getConfiguration());
+        applyAccountConvention(project);
 
         log.info("Loading Celerio SPIs...");
         loadAndApplySpis();
     }
 
-    /**
-     * @Todo allow packs to say which module they require Update: not a good idea as pack may be simple folder on disk... => no
-     */
+    /** Applies the source layout expected by legacy Springfuse projects. */
     private void handleSpringfuseSpecificities() {
         if (config.isSpringfuseMode()) {
             // FOLDER FOR JAVA GENERATED CODE
@@ -211,7 +178,7 @@ public class ProjectFactory {
             config.getCelerio().getConfiguration().getConventions().setWellKnownFolders(wellKnownFolders);
 
             // MISC
-            config.getCelerio().getConfiguration().getGeneration().setUseMavenCelerioPlugin(false); // todo: a bit redundant!
+            config.getCelerio().getConfiguration().getGeneration().setUseMavenCelerioPlugin(false);
 
             // OVERRIDE COMMENTS with default ones
             config.getCelerio().getConfiguration().setHeaderComment(new HeaderComment());
@@ -220,96 +187,6 @@ public class ProjectFactory {
 
     private void setCelerioVersion(Celerio celerio, BuildInfo buildInfo) {
         celerio.getConfiguration().getGeneration().setVersion(buildInfo.getPomVersion());
-    }
-
-    private void buildEntities(Project project, List<EntityConfig> entityConfigs) {
-        Set<String> tablesProcessed = new HashSet<String>();
-        addEntitiesDefinedInUserConfiguration(project, entityConfigs, tablesProcessed);
-        addRemainingEntities(project, tablesProcessed);
-    }
-
-    private void addRemainingEntities(Project project, Set<String> tableProcessed) {
-        for (Table table : config.getMetadata().getTables()) {
-            // Make sure we do not process tables twice
-            if (tableProcessed.contains(table.getName().toUpperCase())) {
-                // skip default entity creation
-                continue;
-            }
-
-            if (!config.getCelerio().getConfiguration().hasTable(table.getName())) {
-                log.info("Skipping table '" + table.getName() + "'. Reason: excluded in configuration");
-                continue;
-            }
-
-            EntityConfig entityConfig = entityConfigFactory.buildEntityConfig(table);
-
-            // Skip conflict cases
-            if (project.hasEntityByName(entityConfig.getEntityName())) {
-                log.warn("Skip default entity creation for table name=" + table.getName() + " entity name=" + entityConfig.getEntityName()
-                        + " as it was already registered!");
-                continue;
-            }
-
-            Entity entity = entityFactory.buildEntity(entityConfig);
-            log.info("Adding entity " + entity.getName());
-            project.addEntity(entity);
-            project.putEntity(entity);
-            tableProcessed.add(table.getName().toUpperCase()); // not really needed but to be consistent...
-        }
-    }
-
-    private void addEntitiesDefinedInUserConfiguration(Project project, List<EntityConfig> entityConfigs, Set<String> tableProcessed) {
-        for (EntityConfig entityConfig : entityConfigs) {
-            if (entityConfig.hasTableName() && !config.getCelerio().getConfiguration().hasTable(entityConfig.getTableName())) {
-                log.info("Skipping table '" + entityConfig.getTableName() + "'. Reason: excluded in configuration");
-                continue;
-            }
-
-            entityConfigFactory.applyFallBacks(entityConfig);
-            Entity entity = entityFactory.buildEntity(entityConfig);
-            log.info("Adding entity " + entity.getName());
-            project.addEntity(entity);
-
-            if (!entity.hasInheritance()) {
-                project.putEntity(entity);
-            }
-
-            // note: we may add a table twice, this is OK, this code is just here to
-            // avoid processing tables not present in the conf
-            // please check addRemainingEntities
-            tableProcessed.add(entity.getTableName().toUpperCase());
-        }
-    }
-
-    private void setupEntities() {
-        for (Entity entity : config.getProject().getCurrentEntities()) {
-            entityFactory.setupAttributes(entity);
-        }
-
-        for (Entity entity : config.getProject().getCurrentEntities()) {
-            uniqueFactory.setupUniques(entity);
-        }
-
-        for (Entity entity : config.getProject().getCurrentEntities()) {
-            primaryKeyFactory.setupPrimaryKey(entity);
-        }
-
-        // Attention: FK hints must be processed after PK
-        for (Entity entity : config.getProject().getCurrentEntities()) {
-            foreignKeyHintsFactory.setupForeignKeyHints(entity);
-        }
-    }
-
-    private void setupRelations() {
-        for (Entity entity : config.getProject().getCurrentEntities()) {
-            relationFactory.setupRelations(entity);
-        }
-    }
-
-    private void setupBusinessKeys() {
-        for (Entity entity : config.getProject().getCurrentEntities()) {
-            businessKeyFactory.setupBusinessKey(entity);
-        }
     }
 
     private void globalValidation() {
@@ -368,7 +245,7 @@ public class ProjectFactory {
         }
     }
 
-    private void conventions(Project project, Configuration configuration) {
+    private void applyAccountConvention(Project project) {
         AccountConvention accountConvention = new AccountConvention();
 
         // try to detect an account entity
@@ -429,7 +306,7 @@ public class ProjectFactory {
         for (TemplatePack templatePack : packLoader.getTemplatePacks()) {
 
             List<EntityContextProperty> entityContextPropertyList = templatePack.getTemplatePackInfo().getEntityContextPropertyList();
-            if (entityContextPropertyList == null || entityContextPropertyList.size() == 0) {
+            if (entityContextPropertyList == null || entityContextPropertyList.isEmpty()) {
                 continue;
             }
 
@@ -499,7 +376,7 @@ public class ProjectFactory {
 
     private void bindProjectSpi(Project project, Class<? extends ProjectSpi> spiClass) {
         try {
-            ProjectSpi spi = spiClass.newInstance();
+            ProjectSpi spi = instantiateSpi(spiClass);
             spi.init(project);
             project.put(spi.velocityVar(), spi.getTarget());
         } catch (Exception e) {
@@ -509,7 +386,7 @@ public class ProjectFactory {
 
     private void bindEntitySpi(Entity entity, Class<? extends EntitySpi> spiClass) {
         try {
-            EntitySpi spi = spiClass.newInstance();
+            EntitySpi spi = instantiateSpi(spiClass);
             spi.init(entity);
             entity.put(spi.velocityVar(), spi.getTarget());
         } catch (Exception e) {
@@ -519,7 +396,7 @@ public class ProjectFactory {
 
     private void bindAttributeSpi(Attribute attribute, Class<? extends AttributeSpi> spiClass) {
         try {
-            AttributeSpi spi = spiClass.newInstance();
+            AttributeSpi spi = instantiateSpi(spiClass);
             spi.init(attribute);
             attribute.put(spi.velocityVar(), spi.getTarget());
         } catch (Exception e) {
@@ -529,13 +406,27 @@ public class ProjectFactory {
 
     private void bindRelationSpi(Relation relation, Class<? extends RelationSpi> spiClass) {
         try {
-            RelationSpi spi = spiClass.newInstance();
+            RelationSpi spi = instantiateSpi(spiClass);
             if (spi.compatibleWith(relation)) {
                 spi.init(relation);
                 ((AbstractRelation) relation).put(spi.velocityVar(), spi.getTarget());
             }
         } catch (Exception e) {
             log.error("Could not instantiate RelationSpi", e);
+        }
+    }
+
+    private static <T> T instantiateSpi(Class<T> spiClass) throws ReflectiveOperationException {
+        try {
+            return spiClass.getDeclaredConstructor().newInstance();
+        } catch (InvocationTargetException e) {
+            if (e.getCause() instanceof Error error) {
+                throw error;
+            }
+            if (e.getCause() instanceof RuntimeException exception) {
+                throw exception;
+            }
+            throw e;
         }
     }
 }

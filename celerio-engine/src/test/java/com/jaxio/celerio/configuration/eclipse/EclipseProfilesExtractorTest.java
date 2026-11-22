@@ -24,9 +24,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
-import javax.xml.bind.JAXBException;
 import java.io.IOException;
-import java.sql.SQLException;
 
 import static org.fest.assertions.Assertions.assertThat;
 
@@ -43,7 +41,7 @@ public class EclipseProfilesExtractorTest {
     private EclipseProfilesLoader loader;
 
     @Test
-    public void load() throws ClassNotFoundException, SQLException, JAXBException, IOException {
+    public void load() throws IOException {
         // top level
         Profiles profiles = loader.load(ctx.getResource(CODE_FORMATTER_ECLIPSE).getFile());
         assertThat(profiles.getVersion()).isEqualTo("11");

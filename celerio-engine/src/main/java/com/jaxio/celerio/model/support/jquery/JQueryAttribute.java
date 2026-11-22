@@ -63,7 +63,7 @@ public class JQueryAttribute implements AttributeSpi {
     }
 
     private void addConstraint(StringBuffer ret, String constraint) {
-        if (ret.length() != 0) {
+        if (!ret.isEmpty()) {
             ret.append(" ");
         }
         ret.append(constraint);

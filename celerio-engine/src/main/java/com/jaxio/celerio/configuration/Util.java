@@ -27,13 +27,17 @@ import static java.io.File.separatorChar;
 
 public class Util {
 
-    public final static String CLASSPATH_CELERIO_PACK = "classpath*:META-INF/celerio-pack.xml";
-    public final static String LOCAL_CELERIO_PACK = "META-INF" + separatorChar + "celerio-pack.xml";
+    public static final String CLASSPATH_CELERIO_PACK = "classpath*:META-INF/celerio-pack.xml";
+    public static final String LOCAL_CELERIO_PACK = "META-INF" + separatorChar + "celerio-pack.xml";
 
-    public static boolean hasSize(List<?> l) {
-        return l != null && l.size() > 0;
+    private Util() {
     }
 
+    public static boolean hasSize(List<?> l) {
+        return l != null && !l.isEmpty();
+    }
+
+    @SafeVarargs
     public static <T> T firstNonNull(T... ts) {
         for (T t : ts) {
             if (t != null) {

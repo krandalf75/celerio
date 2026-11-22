@@ -24,14 +24,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
-import javax.persistence.InheritanceType;
 
 @Log
 @Service
 public class InheritanceFactory {
 
+    private final Config config;
+
     @Autowired
-    private Config config;
+    public InheritanceFactory(Config config) {
+        this.config = config;
+    }
 
     public void wireEntityHierarchies() {
         // wire the entities parent/child
@@ -53,16 +56,16 @@ public class InheritanceFactory {
             Entity entity = config.getProject().getEntityByName(entityConfig.getEntityName());
 
             if (entity.hasInheritance() && !config.getProject().hasEntityBySchemaAndTableName(entity.getTable().getSchemaName(), entity.getTable().getName())) {
-                InheritanceType inheritanceType = entity.getInheritance().getStrategy();
-
-                if (inheritanceType == InheritanceType.SINGLE_TABLE) {
-                    if (entity.isRoot()) {
-                        config.getProject().putEntity(entity);
+                boolean registerEntity = switch (entity.getInheritance().getStrategy()) {
+                    case SINGLE_TABLE -> entity.isRoot();
+                    case JOINED, TABLE_PER_CLASS -> true;
+                    case null -> {
+                        log.warning("Invalid case, there should be an inheritance type");
+                        yield false;
                     }
-                } else if (inheritanceType == InheritanceType.JOINED || inheritanceType == InheritanceType.TABLE_PER_CLASS) {
+                };
+                if (registerEntity) {
                     config.getProject().putEntity(entity);
-                } else {
-                    log.warning("Invalid case, there should be an inheritance type");
                 }
             }
         }

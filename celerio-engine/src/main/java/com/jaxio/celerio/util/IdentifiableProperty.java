@@ -24,17 +24,17 @@ import static org.apache.commons.lang.WordUtils.capitalize;
  * identifiableProperty to get getter/setter/iser.
  */
 public class IdentifiableProperty {
-    private String getter;
-    private String setter;
-    private String iser;
-    private String var;
-    private String varUp;
+    private final String getter;
+    private final String setter;
+    private final String iser;
+    private final String propertyName;
+    private final String varUp;
 
     public IdentifiableProperty(String property) {
         getter = GET.build(property);
         setter = SET.build(property);
         iser = HAS.build(property);
-        var = Character.toLowerCase(property.charAt(0)) + property.substring(1);
+        propertyName = Character.toLowerCase(property.charAt(0)) + property.substring(1);
         varUp = capitalize(property);
     }
 
@@ -51,7 +51,7 @@ public class IdentifiableProperty {
     }
 
     public String getVar() {
-        return var;
+        return propertyName;
     }
 
     public String getVarUp() {

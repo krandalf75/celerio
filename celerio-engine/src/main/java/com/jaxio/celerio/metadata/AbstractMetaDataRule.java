@@ -23,6 +23,4 @@ public abstract class AbstractMetaDataRule<T> implements MetaDataRule<T> {
         return this.getClass().getSimpleName();
     }
 
-    @Override
-    abstract public boolean validate(T t, RuleReport report);
 }

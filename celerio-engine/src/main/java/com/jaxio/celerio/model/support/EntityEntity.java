@@ -34,6 +34,7 @@ public class EntityEntity extends CurrentAndFlatListHolder<Entity, Entity> {
         super(entity, listGetter);
     }
 
+    @SuppressWarnings("java:S4738") // Template packs use these Guava predicate types.
     public EntityEntity(Entity entity, ListGetter<Entity, Entity> listGetter, Predicate<Entity> predicate) {
         super(entity, listGetter, predicate);
     }

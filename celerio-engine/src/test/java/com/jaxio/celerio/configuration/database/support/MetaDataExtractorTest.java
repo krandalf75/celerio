@@ -30,7 +30,6 @@ import org.springframework.oxm.XmlMappingException;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
-import javax.xml.bind.JAXBException;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -51,7 +50,7 @@ public class MetaDataExtractorTest {
     private MetadataExtractor extractor;
 
     @Test
-    public void noTable() throws ClassNotFoundException, SQLException, JAXBException, IOException {
+    public void noTable() throws ClassNotFoundException, SQLException {
         EmbeddedDatabaseBuilder builder = new EmbeddedDatabaseBuilder();
         EmbeddedDatabase embeddedDatabase = builder.setType(EmbeddedDatabaseType.H2).build();
 
@@ -68,7 +67,7 @@ public class MetaDataExtractorTest {
     }
 
     @Test
-    public void minimal() throws ClassNotFoundException, SQLException, JAXBException, IOException {
+    public void minimal() throws ClassNotFoundException, SQLException {
         EmbeddedDatabase embeddedDatabase = createMinimalEmbeddedDatabase(MINIMAL_SCRIPT);
         Metadata meta = extractor.extract(embeddedDatabase.getConnection());
 

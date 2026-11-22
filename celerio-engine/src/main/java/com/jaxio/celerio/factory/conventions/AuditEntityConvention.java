@@ -26,16 +26,19 @@ import static com.google.common.collect.Lists.newArrayList;
 
 @Slf4j
 public class AuditEntityConvention {
-    private Iterable<String> creationAuthor = newArrayList("creationAuthor", "creationBy", "creePar");
-    private Iterable<String> creationDate = newArrayList("creationDate", "dateCreation");
-    private Iterable<String> lastModificationAuthor = newArrayList("lastModificationAuthor", "lastModificationAt", "derniereModificationPar", "modifiePar");
-    private Iterable<String> lastModificationDate = newArrayList("lastModificationDate", "dateDerniereModification", "derniereModification");
+
+    private static final String FOUND_ON = " found on ";
+    private final Iterable<String> creationAuthor = newArrayList("creationAuthor", "creationBy", "creePar");
+    private final Iterable<String> creationDate = newArrayList("creationDate", "dateCreation");
+    private final Iterable<String> lastModificationAuthor = newArrayList("lastModificationAuthor", "lastModificationAt", "derniereModificationPar", "modifiePar");
+    private final Iterable<String> lastModificationDate = newArrayList("lastModificationDate", "dateDerniereModification", "derniereModification");
     @Getter
     private final AuditEntityAttribute auditEntityAttribute;
     private final Entity e;
     @Getter
     private final boolean audited;
 
+    @SuppressWarnings("java:S6832") // The model creates this helper directly for each entity or attribute.
     public AuditEntityConvention(Entity e) {
         this.e = e;
         auditEntityAttribute = attributes(e);
@@ -43,11 +46,11 @@ public class AuditEntityConvention {
     }
 
     private boolean buildIsAudited() {
-        boolean audited = auditEntityAttribute.hasAttribute();
-        if (audited) {
+        boolean supportsAudit = auditEntityAttribute.hasAttribute();
+        if (supportsAudit) {
             log.info(e.getName() + ": assumed by convention to accept audit events");
         }
-        return audited;
+        return supportsAudit;
     }
 
     /**
@@ -66,7 +69,7 @@ public class AuditEntityConvention {
         for (Attribute a : e.getAttributes().getList()) {
             if (a.isString() && match(a.getVar(), creationAuthor)) {
                 auditEntityAttribute.setCreationAuthor(a);
-                log.debug("'creationAuthor' candidate: " + a.getVar() + " found on " + e.getName());
+                log.debug("'creationAuthor' candidate: " + a.getVar() + FOUND_ON + e.getName());
                 return;
             }
         }
@@ -76,7 +79,7 @@ public class AuditEntityConvention {
         for (Attribute a : e.getAttributes().getList()) {
             if (a.isDate() && match(a.getVar(), creationDate)) {
                 auditEntityAttribute.setCreationDate(a);
-                log.debug("'creationDate' candidate: " + a.getVar() + " found on " + e.getName());
+                log.debug("'creationDate' candidate: " + a.getVar() + FOUND_ON + e.getName());
                 return;
             }
         }
@@ -86,7 +89,7 @@ public class AuditEntityConvention {
         for (Attribute a : e.getAttributes().getList()) {
             if (a.isString() && match(a.getVar(), lastModificationAuthor)) {
                 auditEntityAttribute.setLastModificationAuthor(a);
-                log.debug("'lastModificationAuthor' candidate: " + a.getVar() + " found on " + e.getName());
+                log.debug("'lastModificationAuthor' candidate: " + a.getVar() + FOUND_ON + e.getName());
                 return;
             }
         }
@@ -96,7 +99,7 @@ public class AuditEntityConvention {
         for (Attribute a : e.getAttributes().getList()) {
             if (a.isDate() && match(a.getVar(), lastModificationDate)) {
                 auditEntityAttribute.setLastModificationDate(a);
-                log.debug("'lastModificationDate' candidate: " + a.getVar() + " found on " + e.getName());
+                log.debug("'lastModificationDate' candidate: " + a.getVar() + FOUND_ON + e.getName());
                 return;
             }
         }

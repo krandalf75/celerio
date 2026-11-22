@@ -4,6 +4,22 @@ TODO before Celerio 4.0.1 release:
 * adapt all poms so we can deploy on maven central
 * in bootstrap-maven-plugin/pom.xml, enable matrix IT, make it skippable easily
 * migrate more ITs from our private repository
-* replace the test CelerioLoaderTest (currently ignored) by another one
 * change branding code (no longer need to accept the license)
 
+
+Generator improvements
+
+* Extend inheritance mapping to child tables using a different primary-key column
+  name and cover join tables that involve inherited entities.
+* Support composite keys for many-to-many and one-to-one associations, and
+  one-to-one associations through an intermediate join entity. Cover foreign-key
+  attributes in Spring MVC forms and join fetch configuration for intermediate
+  relations when extending these mappings.
+* Expose JPA attribute behavior and entity cache annotation generation through
+  the template model SPI.
+* Allow generated fixtures to select their ValueGenerator. Route imports for
+  generated date/time expressions through the template import holder.
+* Add configurable sorting and JSF calendar patterns, and apply the configured
+  field naming convention to localized attribute bundles.
+* Add JPA temporal annotations for Calendar mappings and translate sequence
+  defaults when generating H2 schema for imported databases.

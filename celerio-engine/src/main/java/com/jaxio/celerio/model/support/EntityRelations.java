@@ -36,6 +36,7 @@ public class EntityRelations extends CurrentAndFlatListHolder<Relation, Entity> 
         super(entity, listGetter);
     }
 
+    @SuppressWarnings("java:S4738") // Template packs use these Guava predicate types.
     public EntityRelations(Entity entity, ListGetter<Relation, Entity> listGetter, Predicate<Relation> predicate) {
         super(entity, listGetter, predicate);
         setSortProperty(AttributeOrder.DISPLAY.attributeSortProperty());

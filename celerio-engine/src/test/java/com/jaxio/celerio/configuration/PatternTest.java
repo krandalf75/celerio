@@ -27,7 +27,6 @@ public class PatternTest {
 
         Assert.assertTrue(p.match("support/toto"));
         Assert.assertTrue(p.match("src/main/resource/support/toto"));
-        // Assert.assertTrue(p.match("src\\main\\resource\\support\\toto"));
     }
 
     @Test

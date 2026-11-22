@@ -21,13 +21,13 @@ import com.jaxio.celerio.model.PackageImportAdder;
 import com.jaxio.celerio.util.AttributeBuilder;
 import org.springframework.util.Assert;
 
-import javax.persistence.CascadeType;
 import javax.persistence.FetchType;
 import java.util.List;
 
-import static com.google.common.collect.Lists.newArrayList;
-
 public class JpaConfigHelper {
+
+    private JpaConfigHelper() {
+    }
 
     // ------------------------------------------
     // OneToXConfig orphanRemoval
@@ -78,63 +78,35 @@ public class JpaConfigHelper {
             return "";
         }
 
-        // we look for the first non empty conf.
-        // not that it could be a NONE conf => user does not want any cascade.
-
-        for (CascadeGetter cascadeGetter : cascadeGetters) {
-            if (cascadeGetter != null) {
-                List<Cascade> cascadeConf = cascadeGetter.getCascades();
-
-                if (cascadeConf != null && cascadeConf.size() > 0) {
-                    List<CascadeType> cascades = convertJpaCascade(cascadeConf);
-                    // we could have removed the NONE element, so we check for emptiness.
-                    if (!cascades.isEmpty()) {
-                        for (CascadeType ct : cascades) {
-                            importAdder.addImport("static javax.persistence.CascadeType." + ct.name());
-                        }
-
-                        AttributeBuilder ab = new AttributeBuilder();
-                        ab.add("cascade", convertJpaCascadeToStrings(cascades));
-                        return ab.getAttributes();
-                    } else {
-                        return ""; // there was 1 element: NONE => user does not want anything, we bail out.
-                    }
-                }
+        for (CascadeGetter getter : cascadeGetters) {
+            if (getter == null) {
+                continue;
+            }
+            List<Cascade> configuration = getter.getCascades();
+            if (configuration != null && !configuration.isEmpty()) {
+                // An explicit NONE stops the fallback to less specific configurations.
+                return formatJpaCascade(importAdder, configuration);
             }
         }
-
         return "";
     }
 
-    private static String[] convertJpaCascadeToStrings(List<CascadeType> cascadeTypes) {
-        if (cascadeTypes == null) {
-            return null;
+    private static String formatJpaCascade(PackageImportAdder importAdder, List<Cascade> configuration) {
+        String[] names = configuration.stream()
+                .map(Cascade::getType)
+                .filter(CascadeType::isJpaType)
+                .map(type -> type.asJpaType().name())
+                .toArray(String[]::new);
+        if (names.length == 0) {
+            return "";
         }
 
-        String[] result = new String[cascadeTypes.size()];
-        int i = 0;
-
-        for (CascadeType ct : cascadeTypes) {
-            result[i++] = ct.name();
+        for (String name : names) {
+            importAdder.addImport("static javax.persistence.CascadeType." + name);
         }
-
-        return result;
-    }
-
-    private static List<CascadeType> convertJpaCascade(List<Cascade> cascades) {
-        if (cascades == null) {
-            return null;
-        }
-
-        List<CascadeType> result = newArrayList();
-
-        for (Cascade c : cascades) {
-            if (c.getType().isJpaType()) {
-                result.add(c.getType().asJpaType());
-            }
-        }
-
-        return result;
+        AttributeBuilder attributes = new AttributeBuilder();
+        attributes.add("cascade", names);
+        return attributes.getAttributes();
     }
 
     // ------------------------------------------
@@ -148,21 +120,16 @@ public class JpaConfigHelper {
             return "";
         }
 
-        // we look for the first non empty conf.
-        // not that it could be a NONE conf => user does not want any fetch type.
-
-        for (FetchTypeGetter fetchTypeGetter : fetchTypeGetters) {
-            if (fetchTypeGetter != null) {
-                if (fetchTypeGetter.getFetch() != null) {
-                    if (fetchTypeGetter.getFetch().isJpaType()) {
-                        FetchType fetchType = fetchTypeGetter.getFetch().asJpaType();
-                        adder.addImport("static javax.persistence.FetchType." + fetchType.name());
-                        return "fetch = " + fetchType.name();
-                    } else { // NONE
-                        return ""; // user explicitly said he does not want any fetch type.
-                    }
-                }
+        for (FetchTypeGetter getter : fetchTypeGetters) {
+            if (getter == null || getter.getFetch() == null) {
+                continue;
             }
+            if (!getter.getFetch().isJpaType()) {
+                return ""; // An explicit NONE stops the fallback.
+            }
+            FetchType fetchType = getter.getFetch().asJpaType();
+            adder.addImport("static javax.persistence.FetchType." + fetchType.name());
+            return "fetch = " + fetchType.name();
         }
 
         return "";
@@ -179,15 +146,12 @@ public class JpaConfigHelper {
             return null;
         }
 
-        // we look for the first non empty conf.
         for (OrderByGetter getter : orderByGetters) {
-            if (getter != null) {
-                if (getter.getOrderBy() != null && !getter.getOrderBy().isEmpty()) {
-                    adder.addImport("javax.persistence.OrderBy");
-                    AttributeBuilder ab = new AttributeBuilder();
-                    ab.addString(getter.getOrderBy());
-                    return ab.bindAttributesTo("@OrderBy");
-                }
+            if (getter != null && getter.getOrderBy() != null && !getter.getOrderBy().isEmpty()) {
+                adder.addImport("javax.persistence.OrderBy");
+                AttributeBuilder attributes = new AttributeBuilder();
+                attributes.addString(getter.getOrderBy());
+                return attributes.bindAttributesTo("@OrderBy");
             }
         }
 
@@ -203,34 +167,30 @@ public class JpaConfigHelper {
             return "";
         }
 
-        for (CacheConfigGetter cacheConfigGetter : cacheConfigGetters) {
-            if (cacheConfigGetter != null) {
-                CacheConfig cacheConfig = cacheConfigGetter.getCacheConfig();
-
-                if (cacheConfig != null) {
-                    if (cacheConfig.getUsage().isNone()) {
-                        return ""; // cleaner than disabling the cache using @Cache (usage = NONE)
-                    } else {
-                        packageImportAdder.addImport("org.hibernate.annotations.Cache");
-                        packageImportAdder.addImport("static org.hibernate.annotations.CacheConcurrencyStrategy." + cacheConfig.getUsage().name());
-
-                        AttributeBuilder attr = new AttributeBuilder();
-                        attr.add("usage = " + cacheConfig.getUsage().name());
-
-                        if (cacheConfig.hasInclude()) {
-                            attr.addString("include", cacheConfig.getInclude());
-                        }
-
-                        if (cacheConfig.hasRegion()) {
-                            attr.addString("region", cacheConfig.getInclude());
-                        }
-
-                        return attr.bindAttributesTo("@Cache");
-                    }
-                }
+        for (CacheConfigGetter getter : cacheConfigGetters) {
+            if (getter != null && getter.getCacheConfig() != null) {
+                return formatCacheAnnotation(packageImportAdder, getter.getCacheConfig());
             }
         }
-
         return "";
+    }
+
+    private static String formatCacheAnnotation(PackageImportAdder importAdder, CacheConfig cache) {
+        if (cache.getUsage().isNone()) {
+            return "";
+        }
+        String usage = cache.getUsage().name();
+        importAdder.addImport("org.hibernate.annotations.Cache");
+        importAdder.addImport("static org.hibernate.annotations.CacheConcurrencyStrategy." + usage);
+
+        AttributeBuilder attributes = new AttributeBuilder();
+        attributes.add("usage = " + usage);
+        if (cache.hasInclude()) {
+            attributes.addString("include", cache.getInclude());
+        }
+        if (cache.hasRegion()) {
+            attributes.addString("region", cache.getRegion());
+        }
+        return attributes.bindAttributesTo("@Cache");
     }
 }

@@ -24,7 +24,7 @@ import java.util.List;
 
 public abstract class CompositeManyToOne extends CompositeRelation {
 
-    public CompositeManyToOne(Namer fromNamer, Namer toNamer, List<Attribute> fromAttributes, Entity fromEntity, Entity toEntity, List<Attribute> toAttributes) {
+    protected CompositeManyToOne(Namer fromNamer, Namer toNamer, List<Attribute> fromAttributes, Entity fromEntity, Entity toEntity, List<Attribute> toAttributes) {
         super(fromNamer, toNamer, fromAttributes, fromEntity, toEntity, toAttributes);
     }
 
@@ -40,11 +40,11 @@ public abstract class CompositeManyToOne extends CompositeRelation {
             sb.append(a.getFullColumnName()).append(", ");
         }
         sb.append(")");
-        return sb.toString().replaceAll(", \\)", ")");
+        return sb.toString().replace(", )", ")");
     }
 
     @Override
-    final public boolean isManyToOne() {
+    public final boolean isManyToOne() {
         return true;
     }
 

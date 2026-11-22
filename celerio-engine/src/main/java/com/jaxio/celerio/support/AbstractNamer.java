@@ -28,18 +28,12 @@ import static com.jaxio.celerio.util.StringUtil.getPlural;
 
 public abstract class AbstractNamer implements Namer {
 
-    @Override
-    public abstract String getPackageName();
-
-    @Override
-    public abstract String getType();
-
-    private String var;
+    private String propertyName;
 
     @ForbiddenWhenBuilding
     @Override
     public String getVar() {
-        if (var == null) {
+        if (propertyName == null) {
             String typeEscaped = StringUtil.escape(getType());
             if (typeEscaped.length() >= 3) {
                 String first3cars = typeEscaped.substring(0, 3);
@@ -47,9 +41,9 @@ public abstract class AbstractNamer implements Namer {
                     return typeEscaped;
                 }
             }
-            var = StringUtil.getFirstCharacterLowered(typeEscaped);
+            propertyName = StringUtil.getFirstCharacterLowered(typeEscaped);
         }
-        return var;
+        return propertyName;
     }
 
     @Override

@@ -23,7 +23,6 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import java.io.File;
@@ -72,7 +71,6 @@ public class CleanGeneratedMojo extends AbstractMojo {
      */
     @Parameter
     protected List<String> excludedFiles;
-    private ApplicationContext context;
 
     public void execute() throws MojoExecutionException {
         try {
@@ -88,10 +86,10 @@ public class CleanGeneratedMojo extends AbstractMojo {
             getLog().info("skipping celerio-maven-plugin cleanGenerated");
             return;
         }
-        context = new ClassPathXmlApplicationContext("classpath:applicationContext-celerio.xml");
-
-        FileTracker fileTracker = context.getBean(FileTracker.class);
-        fileTracker.deleteGeneratedFileIfIdentical(new File(getProjectBaseDir()), excludedFiles);
+        try (ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("classpath:applicationContext-celerio.xml")) {
+            FileTracker fileTracker = context.getBean(FileTracker.class);
+            fileTracker.deleteGeneratedFileIfIdentical(new File(getProjectBaseDir()), excludedFiles);
+        }
     }
 
     private String getProjectBaseDir() {

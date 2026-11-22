@@ -20,6 +20,9 @@ package com.jaxio.celerio.util;
  * Helper class to cast collections
  */
 public abstract class MiscUtil {
+    private MiscUtil() {
+    }
+
 
     public static String toVar(String name) {
         return convertName(StringUtil.escape(name), true);
@@ -50,38 +53,26 @@ public abstract class MiscUtil {
         // we are in a specific case, we cannot allow lower case
         if (isJavaBeanFirstTwoCharsUpperCaseSpecificCaseInInternalFormat(name)) {
             wimpyCaps = true;
-        } else {
-            if (ignoreFirstUnderscore(name)) {
-                name = name.substring(1);
-            }
+        } else if (ignoreFirstUnderscore(name)) {
+            name = name.substring(1);
         }
         StringBuffer buffer = new StringBuffer(name.length());
-        char list[] = name.toCharArray();
+        char[] list = name.toCharArray();
         char lastChar = 'x';
-        for (int i = 0; i < list.length; i++) {
-            if (isSeparator(lastChar)) {
-                if (isWithinAnUnderscorePatternButIsNotJavaBeanSpecificCase(name, i)) {
-                    lastChar = Character.toLowerCase(list[i]);
-                } else {
-                    lastChar = Character.toUpperCase(list[i]);
-                }
-            } else if (isSeparator(list[i]) && (i + 1) < list.length) {
-                if (isWithinAnUnderscorePatternButIsNotJavaBeanSpecificCase(name, i)) {
-                    lastChar = Character.toLowerCase(list[++i]);
-                } else {
-                    lastChar = Character.toUpperCase(list[++i]);
-                }
-            } else {
-                // ok use this char
-                lastChar = Character.toLowerCase(list[i]);
+        int index = 0;
+        while (index < list.length) {
+            char current = list[index];
+            boolean skipSeparator = !isSeparator(lastChar) && isSeparator(current) && index + 1 < list.length;
+            boolean capitalize = (isSeparator(lastChar) || skipSeparator)
+                    && !isWithinAnUnderscorePatternButIsNotJavaBeanSpecificCase(name, index);
+            if (skipSeparator) {
+                current = list[++index];
             }
+            lastChar = capitalize ? Character.toUpperCase(current) : Character.toLowerCase(current);
             buffer.append(lastChar);
+            index++;
         }
-        if (!wimpyCaps) {
-            return StringUtil.getFirstCharacterUppered(buffer);
-        } else {
-            return buffer.toString();
-        }
+        return wimpyCaps ? buffer.toString() : StringUtil.getFirstCharacterUppered(buffer);
     }
 
     private static String convertNameNoUnderscores(String name, boolean wimpyCaps) {
@@ -222,39 +213,24 @@ public abstract class MiscUtil {
      * Return true if the passed value is all lower or all upper case.
      */
     public static boolean isUniCase(String value) {
-        if (value.toLowerCase().equals(value) || value.toUpperCase().equals(value)) {
-            return true;
-        }
-        return false;
+        return value.toLowerCase().equals(value) || value.toUpperCase().equals(value);
     }
 
-    static private boolean isJavaBeanFirstTwoCharsUpperCaseSpecificCaseInInternalFormat(String value) {
+    private static boolean isJavaBeanFirstTwoCharsUpperCaseSpecificCaseInInternalFormat(String value) {
         if (value.length() > 2 && Character.isUpperCase(value.charAt(0)) && Character.isUpperCase(value.charAt(1))) {
             return true;
         }
-        if (value.length() > 5 && isSeparator(value.charAt(0)) && !isSeparator(value.charAt(1)) && isSeparator(value.charAt(2))
-                && !isSeparator(value.charAt(3)) && !isSeparator(value.charAt(4))) {
-            // something that looks like that: _x_xx
-            return true;
-        } else {
-            return false;
-        }
+        // A name starting with a pattern such as _x_xx can also match.
+        return value.length() > 5 && isSeparator(value.charAt(0)) && !isSeparator(value.charAt(1))
+                && isSeparator(value.charAt(2)) && !isSeparator(value.charAt(3)) && !isSeparator(value.charAt(4));
     }
 
-    static public boolean isWithinAnUnderscorePatternButIsNotJavaBeanSpecificCase(String value, int position) {
+    public static boolean isWithinAnUnderscorePatternButIsNotJavaBeanSpecificCase(String value, int position) {
         String ret = getUnderscorePatternButIsNotJavaBeanSpecificCase(value);
-        if (ret.length() == 0) {
-            return false;
-        } else {
-            if (position <= ret.length()) {
-                return true;
-            } else {
-                return false;
-            }
-        }
+        return !ret.isEmpty() && position <= ret.length();
     }
 
-    static private String getUnderscorePatternButIsNotJavaBeanSpecificCase(String value) {
+    private static String getUnderscorePatternButIsNotJavaBeanSpecificCase(String value) {
         // this cannot be at least _a_b_cXXXXXX
         if (value.length() < 6) {
             return "";
@@ -263,29 +239,15 @@ public abstract class MiscUtil {
             return "";
         }
         for (int i = 0; i < value.length(); i++) {
-            if ((i % 2) == 0 && !isSeparator(value.charAt(i))) {
-                if (i < 4) { // 4 is at least two _
-                    return "";
-                } else {
-                    return value.substring(0, i);
-                }
-            }
-            if ((i % 2) == 1 && isSeparator(value.charAt(i))) {
-                if (i < 4) { // 4 is at least two _
-                    return "";
-                } else {
-                    return value.substring(0, i);
-                }
+            if ((i % 2 == 0) != isSeparator(value.charAt(i))) {
+                return i < 4 ? "" : value.substring(0, i);
             }
         }
         return value;
     }
 
-    static private boolean ignoreFirstUnderscore(String value) {
-        if (value.length() > 3 && isSeparator(value.charAt(0)) && !isSeparator(value.charAt(1)) && !isSeparator(value.charAt(2))) {
-            return true;
-        } else {
-            return false;
-        }
+    private static boolean ignoreFirstUnderscore(String value) {
+        return value.length() > 3 && isSeparator(value.charAt(0)) && !isSeparator(value.charAt(1))
+                && !isSeparator(value.charAt(2));
     }
 }

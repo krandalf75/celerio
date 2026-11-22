@@ -17,23 +17,22 @@
 package com.jaxio.celerio.template.pack;
 
 import com.jaxio.celerio.util.IOUtil;
-import org.springframework.util.Assert;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.Collections;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static org.apache.commons.io.FilenameUtils.normalize;
-import static org.apache.commons.io.IOUtils.closeQuietly;
-import static org.apache.commons.io.IOUtils.toByteArray;
 
 public class LocalResourcePackFile implements TemplatePack {
-    private String packAbsolutePath;
-    private TemplatePackInfo templatePackInfo;
+    private final String packAbsolutePath;
+    private final TemplatePackInfo templatePackInfo;
 
+    // Existing callers may catch IOException when constructing a local pack.
+    @SuppressWarnings("java:S1130")
     public LocalResourcePackFile(TemplatePackInfo templatePackInfo, File packRoot) throws IOException {
         this.templatePackInfo = templatePackInfo;
         this.packAbsolutePath = normalize(packRoot.getAbsolutePath());
@@ -62,7 +61,7 @@ public class LocalResourcePackFile implements TemplatePack {
         // Force execution order to natural ordering
         // by analogy with ClasspathResourceUncryptedPack even if here
         // it is probably not necessary.
-        Collections.sort(unfilteredTemplateFiles);
+        unfilteredTemplateFiles.sort(null);
         return unfilteredTemplateFiles;
     }
 
@@ -74,13 +73,6 @@ public class LocalResourcePackFile implements TemplatePack {
     // -----------------------------------------
     // Helpers
     // -----------------------------------------
-
-    private File convertToFile(String folder) {
-        Assert.notNull(folder, "LocalResourcePackFile pack points to an null folder");
-        File result = new File(folder);
-        Assert.isTrue(result.exists(), "LocalResourcePackFile pack points to an unknown folder : " + folder);
-        return result;
-    }
 
     private String remove(String absoluteFilename) {
         return absoluteFilename.substring(packAbsolutePath.length() + 1);
@@ -100,13 +92,7 @@ public class LocalResourcePackFile implements TemplatePack {
         if (!containsTemplate(template)) {
             throw new IllegalArgumentException("Template " + template + " is not a template");
         }
-        java.io.InputStream is = null;
-        try {
-            is = new FileInputStream(getAbsoluteTemplate(template));
-            return toByteArray(is);
-        } finally {
-            closeQuietly(is);
-        }
+        return Files.readAllBytes(Path.of(getAbsoluteTemplate(template)));
     }
 
     private boolean isTemplateGivenAsAnAbsoluteFile(String template) {

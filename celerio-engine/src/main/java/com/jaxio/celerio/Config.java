@@ -39,6 +39,18 @@ public class Config {
     private String baseDir = "";
     private boolean springfuseMode;
 
+    public Project getProject() {
+        return project;
+    }
+
+    public Celerio getCelerio() {
+        return celerio;
+    }
+
+    public String getBaseDir() {
+        return baseDir;
+    }
+
     public void reset() {
         outputResult = null;
         project = new Project();

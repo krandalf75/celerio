@@ -26,10 +26,10 @@ import static com.google.common.collect.Maps.newHashMap;
 
 @Getter
 public class RuleReport {
-    private Map<Table, String> tableWarnings = newHashMap();
-    private Map<Table, String> tableErrors = newHashMap();
-    private Map<Column, String> columnWarnings = newHashMap();
-    private Map<Column, String> columnErrors = newHashMap();
+    private final Map<Table, String> tableWarnings = newHashMap();
+    private final Map<Table, String> tableErrors = newHashMap();
+    private final Map<Column, String> columnWarnings = newHashMap();
+    private final Map<Column, String> columnErrors = newHashMap();
 
     public void warn(Table t, String message) {
         tableWarnings.put(t, message);

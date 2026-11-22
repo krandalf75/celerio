@@ -31,8 +31,8 @@ import static com.google.common.collect.Lists.newArrayList;
 import static org.apache.commons.io.IOUtils.toByteArray;
 
 public class BrandUtil {
-    private Brand brand = new Brand();
-    private OutputResult outputResult;
+    private final Brand brand = new Brand();
+    private final OutputResult outputResult;
 
     public BrandUtil(OutputResult outputResult) {
         this.outputResult = outputResult;
@@ -59,7 +59,7 @@ public class BrandUtil {
 
                 @Override
                 public TemplatePackInfo getTemplatePackInfo() {
-                    throw new RuntimeException("not implemented");
+                    throw new UnsupportedOperationException("A logo does not have template pack metadata");
                 }
 
                 @Override

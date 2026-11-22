@@ -178,9 +178,11 @@ public class Table {
     }
 
     private void putColumnByName(Column column) {
-        // TODO: assert column's name not null
-        if (column.getName() != null) {
-            columnsByName.put(column.getName().toUpperCase(), column);
+        String columnName = column.getName();
+        if (columnName != null) {
+            columnsByName.put(columnName.toUpperCase(), column);
+        } else {
+            log.debug("Skipping an unnamed column when indexing metadata for table {}", getName());
         }
     }
 
@@ -262,10 +264,9 @@ public class Table {
         }
 
         for (IndexHolder ih : indexHoldersByName.values()) {
-            if (ih.isUnique() && ih.getSize() == 1) {
-                if (ih.getIndexes().iterator().next().getColumnName().equalsIgnoreCase(columnName)) {
-                    return true;
-                }
+            if (ih.isUnique() && ih.getSize() == 1
+                    && ih.getIndexes().iterator().next().getColumnName().equalsIgnoreCase(columnName)) {
+                return true;
             }
         }
 
@@ -379,7 +380,7 @@ public class Table {
     }
 
     public boolean hasPk() {
-        return getPrimaryKeys().size() > 0;
+        return !getPrimaryKeys().isEmpty();
     }
 
     public boolean hasSimplePrimaryKey() {

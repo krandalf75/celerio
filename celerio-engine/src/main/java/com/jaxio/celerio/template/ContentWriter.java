@@ -26,6 +26,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
+import java.io.IOException;
 
 import static com.jaxio.celerio.template.ContentWriter.Action.*;
 import static org.apache.commons.io.FilenameUtils.normalize;
@@ -33,72 +34,64 @@ import static org.apache.commons.io.FilenameUtils.normalize;
 @Slf4j
 @Service
 public class ContentWriter {
+    private final IOUtil ioUtil;
+
     @Autowired
-    private IOUtil ioUtil;
+    public ContentWriter(IOUtil ioUtil) {
+        this.ioUtil = ioUtil;
+    }
 
     public void processFile(OutputResult outputResult, TemplatePack templatePack, Template template, byte[] contentToPublish, String targetFilename)
-            throws Exception {
+            throws IOException {
         SourceFile userSource = outputResult.getUserSource();
         SourceFile generatedSource = outputResult.getGeneratedSource();
+        String filename = normalize(targetFilename);
 
-        targetFilename = normalize(targetFilename);
-
-        if ((!outputResult.sameDirectory()) && userSource.fileExists(targetFilename)) {
-            // First check in user folder, but only if the globally configured outputDirectory
-            // is different from the regular maven baseDir.
-
-            // clean up potential previously generated file (when userSource was not yet containing the file)
-            if (generatedSource.fileExists(targetFilename)) {
-                ioUtil.forceMove(new File(generatedSource.getFullPath(targetFilename)),
-                        new File(userSource.getFullPath(outputResult.getCollisionName(targetFilename) + ".old")));
+        if (!outputResult.sameDirectory() && userSource.fileExists(filename)) {
+            if (generatedSource.fileExists(filename)) {
+                ioUtil.forceMove(new File(generatedSource.getFullPath(filename)),
+                        new File(userSource.getFullPath(outputResult.getCollisionName(filename) + ".old")));
             }
-
-            // determines if regeneration is required
-            if (userSource.isSameContent(targetFilename, contentToPublish)) {
-                if (log.isDebugEnabled()) {
-                    packDebug(templatePack, IDENTICAL_EXISTS, targetFilename);
-                }
+            if (userSource.isSameContent(filename, contentToPublish)) {
+                logIdentical(templatePack, filename);
             } else {
-                // Since outputDirectory is different, this is considered by definition as a collision
-                targetFilename = outputResult.getCollisionName(targetFilename);
-                if (log.isInfoEnabled()) {
-                    packInfo(templatePack, GENERATE_IN_COLLISIONS_FOLDER, targetFilename);
-                }
-
-                // generate
-                outputResult.addCollisionContent(contentToPublish, targetFilename, templatePack, template);
+                writeCollision(outputResult, templatePack, template, contentToPublish, filename);
             }
-        } else if (generatedSource.fileExists(targetFilename)) {
-            // Checks in generated folder. Beware, it could be the same as user folder.
-
-            if (generatedSource.isSameContent(targetFilename, contentToPublish)) {
-                if (log.isDebugEnabled()) {
-                    packDebug(templatePack, IDENTICAL_EXISTS, targetFilename);
-                }
-            } else {
-                if (outputResult.hasCollision(targetFilename)) {
-                    // NOTE: the method above is contextual it depends on outputDirectory...
-                    targetFilename = outputResult.getCollisionName(targetFilename);
-                    if (log.isInfoEnabled()) {
-                        packInfo(templatePack, GENERATE_IN_COLLISIONS_FOLDER, targetFilename);
-                    }
-                    outputResult.addCollisionContent(contentToPublish, targetFilename, templatePack, template);
-                } else {
-                    if (log.isInfoEnabled()) {
-                        packInfo(templatePack, GENERATE_AND_REPLACE, getFullPathForLog(outputResult, targetFilename));
-                    }
-                    // generate
-                    outputResult.addContent(contentToPublish, targetFilename, templatePack, template);
-                }
-            }
-        } else {
-            if (log.isInfoEnabled()) {
-                packInfo(templatePack, GENERATE, getFullPathForLog(outputResult, targetFilename));
-            }
-
-            // generate
-            outputResult.addContent(contentToPublish, targetFilename, templatePack, template);
+            return;
         }
+
+        if (!generatedSource.fileExists(filename)) {
+            writeGenerated(outputResult, templatePack, template, contentToPublish, filename, GENERATE);
+        } else if (generatedSource.isSameContent(filename, contentToPublish)) {
+            logIdentical(templatePack, filename);
+        } else if (outputResult.hasCollision(filename)) {
+            writeCollision(outputResult, templatePack, template, contentToPublish, filename);
+        } else {
+            writeGenerated(outputResult, templatePack, template, contentToPublish, filename, GENERATE_AND_REPLACE);
+        }
+    }
+
+    private void logIdentical(TemplatePack templatePack, String filename) {
+        if (log.isDebugEnabled()) {
+            packDebug(templatePack, IDENTICAL_EXISTS, filename);
+        }
+    }
+
+    private void writeCollision(OutputResult outputResult, TemplatePack pack, Template template, byte[] content, String filename)
+            throws IOException {
+        String collisionName = outputResult.getCollisionName(filename);
+        if (log.isInfoEnabled()) {
+            packInfo(pack, GENERATE_IN_COLLISIONS_FOLDER, collisionName);
+        }
+        outputResult.addCollisionContent(content, collisionName, pack, template);
+    }
+
+    private void writeGenerated(OutputResult outputResult, TemplatePack pack, Template template, byte[] content, String filename,
+            Action action) throws IOException {
+        if (log.isInfoEnabled()) {
+            packInfo(pack, action, getFullPathForLog(outputResult, filename));
+        }
+        outputResult.addContent(content, filename, pack, template);
     }
 
     /**

@@ -4,7 +4,7 @@
     <configuration rootPackage="${groupId}" applicationName="${artifactId}">
         <!-- Which tables are used for generation -->
         <tables>
-            <!-- <table include="false" pattern="*_AUDIT"/> -->
+            <!-- To exclude audit tables, add a table rule with include=false and pattern=*_AUDIT before the catch-all. -->
             <table include="true" pattern="*"/>
         </tables>
 
@@ -12,14 +12,14 @@
         <numberMappings>
             <numberMapping mappedType="M_BOOLEAN" columnSizeMin="1" columnSizeMax="2" columnDecimalDigitsMin="0"
                            columnDecimalDigitsMax="0"/>
-            <!-- <numberMapping mappedType="M_BIGDECIMAL" columnSizeMin="10" columnDecimalDigitsMin="4"/> -->
+            <!-- An optional numberMapping can select M_BIGDECIMAL with minimum size 10 and minimum decimal digits 4. -->
         </numberMappings>
 
         <!-- global date mapping (optional) -->
         <dateMappings>
-            <!-- <dateMapping columnNameRegExp="VERSION" mappedType="M_UTILDATE"/> -->
-            <!-- <dateMapping columnJdbcType="TIMESTAMP" mappedType="M_LOCALDATETIME"/> -->
-            <!-- <dateMapping columnJdbcType="DATE" mappedType="M_LOCALDATE"/> -->
+            <!-- An optional dateMapping can map columns matching VERSION to M_UTILDATE. -->
+            <!-- Use an M_LOCALDATETIME dateMapping for JDBC TIMESTAMP columns to generate java.time types. -->
+            <!-- Use an M_LOCALDATE dateMapping for JDBC DATE columns to generate java.time types. -->
         </dateMappings>
 
         <!-- default configuration for fetch type / cascades / 2d level cache -->
@@ -78,9 +78,7 @@
         </defaultInverseManyToManyConfig>
 
         <conventions identifiableProperty="id">
-            <!-- <columnRenamers>
-                <columnRenamer regexp="^.{3}_" replace="" />
-            </columnRenamers> -->
+            <!-- A columnRenamer with regexp ^.{3}_ and an empty replacement removes a three-character prefix followed by an underscore. -->
         </conventions>
     </configuration>
 

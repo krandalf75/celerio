@@ -18,17 +18,19 @@ package com.jaxio.celerio.util;
 
 import org.junit.Test;
 
-import java.io.UnsupportedEncodingException;
+import static com.jaxio.celerio.util.EncodingUtil.fixIso;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 public class EncodingUtilTest {
     @Test
-    public void isoEncoding() throws UnsupportedEncodingException {
-        // assertThat(fixIso(null)).isNull();
-        // assertThat(fixIso("")).isEqualTo("");
-        // assertThat(fixIso("NÂ°Client")).isEqualTo("N°Client");
-        // assertThat(fixIso("N°Client")).isEqualTo("N°Client");
-        // assertThat(fixIso("#TÃ©lÃ©phone")).isEqualTo("#Téléphone");
-        // assertThat(fixIso("#Téléphone")).isEqualTo("#Téléphone");
-        // assertThat(fixIso("# Courrier Ã©lectronique")).isEqualTo("# Courrier électronique");
+    public void repairsMojibakeAndPreservesValidText() {
+        assertNull(fixIso(null));
+        assertEquals("", fixIso(""));
+        assertEquals("N°Client", fixIso("NÂ°Client"));
+        assertEquals("N°Client", fixIso("N°Client"));
+        assertEquals("#Téléphone", fixIso("#TÃ©lÃ©phone"));
+        assertEquals("#Téléphone", fixIso("#Téléphone"));
+        assertEquals("# Courrier électronique", fixIso("# Courrier Ã©lectronique"));
     }
 }

@@ -36,13 +36,17 @@ import static org.apache.commons.lang.StringUtils.isBlank;
 
 public class JpaAttribute extends AbstractAttributeSpi {
 
+    private static final String TEMPORAL_ANNOTATION = "javax.persistence.Temporal";
+    private static final String GENERATED_VALUE_ANNOTATION = "javax.persistence.GeneratedValue";
+
+    @SuppressWarnings("java:S6832") // The model creates this helper directly for each entity or attribute.
     public JpaAttribute(Attribute attribute) {
         init(attribute);
     }
 
     @Override
     public String velocityVar() {
-        return "jpa--NOT-YET-USED"; // TODO: use it
+        return "jpa";
     }
 
     @Override
@@ -114,23 +118,6 @@ public class JpaAttribute extends AbstractAttributeSpi {
                 annotation.append("@Convert(converter=" + attribute.getType() + "Converter.class" + ")");
             }
             return annotation.toString();
-/*
-        // NOT NEEDED WITH HIBERNATE 5.
-        } else if (attribute.getMappedType() == MappedType.M_LOCALDATE) {
-            addImport("org.hibernate.annotations.Type");
-            String hibernateType = "org.jadira.usertype.dateandtime.joda.PersistentLocalDate";
-            if (attribute.getConfig().getCelerio().getConfiguration().hasJodaTime()) {
-                hibernateType = attribute.getConfig().getCelerio().getConfiguration().getJodaTime().getLocalDateHibernateType();
-            }
-            return "@Type(type = \"" + hibernateType + "\")";
-        } else if (attribute.getMappedType() == MappedType.M_LOCALDATETIME) {
-            addImport("org.hibernate.annotations.Type");
-            String hibernateType = "org.jadira.usertype.dateandtime.joda.PersistentLocalDateTime";
-            if (attribute.getConfig().getCelerio().getConfiguration().hasJodaTime()) {
-                hibernateType = attribute.getConfig().getCelerio().getConfiguration().getJodaTime().getLocalDateTimeHibernateType();
-            }
-            return "@Type(type = \"" + hibernateType + "\")";
-*/
         } else {
             return null;
         }
@@ -196,20 +183,20 @@ public class JpaAttribute extends AbstractAttributeSpi {
     }
 
     public String getTemporalAnnotation() {
-        if (attribute.isJavaUtilOnlyDate() /* TODO: handle mapping to Calendar */) {
-            addImport("javax.persistence.Temporal");
+        if (attribute.isJavaUtilOnlyDate()) {
+            addImport(TEMPORAL_ANNOTATION);
             addImport("static javax.persistence.TemporalType.DATE");
             return "@Temporal(DATE)";
         }
 
         if (attribute.isJavaUtilDateAndTime()) {
-            addImport("javax.persistence.Temporal");
+            addImport(TEMPORAL_ANNOTATION);
             addImport("static javax.persistence.TemporalType.TIMESTAMP");
             return "@Temporal(TIMESTAMP)";
         }
 
         if (attribute.isJavaUtilOnlyTime()) {
-            addImport("javax.persistence.Temporal");
+            addImport(TEMPORAL_ANNOTATION);
             addImport("static javax.persistence.TemporalType.TIME");
             return "@Temporal(TIME)";
         }
@@ -321,10 +308,7 @@ public class JpaAttribute extends AbstractAttributeSpi {
             if (attribute.getColumnConfig().getSize() == 32) {
                 return "uuid";
             } else if (attribute.getColumnConfig().getSize() == 36) {
-                // assuming Hibernate 3.6.9 at least
-                // avoid this warning:
-                // [jpa2222] - 2012-01-20 16:08:58,432 - - Using org.hibernate.id.UUIDHexGenerator which does not generate IETF RFC 4122 compliant UUID values;
-                // consider using org.hibernate.id.UUIDGenerator instead
+                // Hibernate's uuid2 strategy emits standard hyphenated UUIDs.
                 return "uuid2";
             } else {
                 return "assigned";
@@ -347,12 +331,12 @@ public class JpaAttribute extends AbstractAttributeSpi {
         }
 
         if (attribute.getColumnConfig().useConfigForIdGenerator()) {
-            // TODO: explain why we do not directly check attribute.getColumnConfig().hasGeneratedValue() in the if statement above.
+            // A configured generic generator also selects this path when there is no GeneratedValue declaration.
             return getGeneratedValueAnnotationByConfiguration();
         } else if (attribute.getAutoIncrement() == TRUE && !attribute.isSimpleFk()) {
             // the jdbc driver supports IS_AUTOINCREMENT metadata, great!
             // if it is an fk, we do not want @GeneratedValue because we use instead @MapsId on the association...
-            addImport("javax.persistence.GeneratedValue");
+            addImport(GENERATED_VALUE_ANNOTATION);
             addImport("static javax.persistence.GenerationType.IDENTITY");
             return "@GeneratedValue(strategy = IDENTITY)";
         } else if (attribute.getAutoIncrement() == FALSE && /* 32 length string are special for us */!attribute.isString()) {
@@ -366,7 +350,7 @@ public class JpaAttribute extends AbstractAttributeSpi {
     }
 
     private String getGeneratedValueForSequenceNameByConfiguration() {
-        addImport("javax.persistence.GeneratedValue");
+        addImport(GENERATED_VALUE_ANNOTATION);
         addImport("static javax.persistence.GenerationType.SEQUENCE");
         return "@GeneratedValue(strategy = SEQUENCE, " //
                 + "generator = \"" + attribute.getEntity().getEntityConfig().getSequenceName() + "\")";
@@ -375,7 +359,7 @@ public class JpaAttribute extends AbstractAttributeSpi {
     private String getGeneratedValueAnnotationByConfiguration() {
         if (attribute.getColumnConfig().hasGeneratedValue()) {
             GeneratedValue gv = attribute.getColumnConfig().getGeneratedValue();
-            addImport("javax.persistence.GeneratedValue");
+            addImport(GENERATED_VALUE_ANNOTATION);
             if (gv.hasStrategy() && gv.hasGenerator()) {
                 addImport("static javax.persistence.GenerationType." + gv.getStrategy());
                 return "@GeneratedValue(strategy = " + gv.getStrategy() + ", generator = \"" + gv.getGenerator() + "\")";
@@ -393,7 +377,7 @@ public class JpaAttribute extends AbstractAttributeSpi {
     private String getGeneratedValueAnnotationByConvention() {
         if (hasIdGeneratorByConvention()) {
             String strategy = getGenericGeneratorStrategy();
-            addImport("javax.persistence.GeneratedValue");
+            addImport(GENERATED_VALUE_ANNOTATION);
             if (isBlank(strategy)) {
                 return "@GeneratedValue";
             } else {
@@ -419,7 +403,6 @@ public class JpaAttribute extends AbstractAttributeSpi {
     /**
      * mirror the getGeneratedValueAnnotation logic and return true if
      * a GeneratedValue annotation applies.
-     * TODO: code review.
      */
     private boolean uglyHackHasGeneratedValueAnno() {
         if (useSequenceNameShortcut()) {
@@ -530,7 +513,7 @@ public class JpaAttribute extends AbstractAttributeSpi {
             ggab.addString("name", gg.getName());
             ggab.addString("strategy", gg.getStrategy());
 
-            if (gg.getParameters().size() > 0) {
+            if (!gg.getParameters().isEmpty()) {
                 addImport("org.hibernate.annotations.Parameter");
 
                 String[] parameters = new String[gg.getParameters().size()];

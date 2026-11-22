@@ -29,7 +29,7 @@ public class ManyToMany extends AbstractIntermediateRelation {
     }
 
     @Override
-    final public boolean isManyToMany() {
+    public final boolean isManyToMany() {
         return true;
     }
 

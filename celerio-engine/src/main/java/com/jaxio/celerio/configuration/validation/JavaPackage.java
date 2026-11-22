@@ -30,7 +30,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Target({METHOD, FIELD, CONSTRUCTOR, PARAMETER})
 @Retention(RUNTIME)
 @ReportAsSingleViolation
-@Pattern(regexp = "(|(\\p{Alpha}+[\\p{XDigit}_-]*[.]?)*)")
+@Pattern(regexp = "(?:\\p{Alpha}[\\p{Alpha}\\p{XDigit}_-]*+(?:[.]\\p{Alpha}[\\p{Alpha}\\p{XDigit}_-]*+)*+[.]?)?")
 public @interface JavaPackage {
     boolean allowEmpty() default true;
 

@@ -34,9 +34,9 @@ public class CompositePrimaryKey extends ClassNamer implements PrimaryKey {
     private final List<Attribute> attributes;
 
     public CompositePrimaryKey(Entity entity, List<Attribute> attributes) {
-        super(entity, ClassType.primaryKey);
         Assert.notNull(entity);
         Assert.isTrue(attributes.size() > 1, "Composite PK must have at least 2 attributes");
+        super(entity, ClassType.primaryKey);
         for (Attribute attribute : attributes) {
             attribute.setInCpk(true);
         }
@@ -45,43 +45,42 @@ public class CompositePrimaryKey extends ClassNamer implements PrimaryKey {
     }
 
     @Override
-    final public String getVar() {
+    public final String getVar() {
         return entity.getConfig().getCelerio().getConfiguration().getConventions().getIdentifiableProperty();
     }
 
     @Override
-    final public boolean isNoPk() {
+    public final boolean isNoPk() {
         return false;
     }
 
     @Override
-    final public boolean isSimple() {
+    public final boolean isSimple() {
         return false;
     }
 
     @Override
-    final public boolean isComposite() {
+    public final boolean isComposite() {
         return true;
     }
 
     @Override
-    final public boolean isJavaBaseClass() {
+    public final boolean isJavaBaseClass() {
         return false;
     }
 
     @Override
-    final public boolean isImported() {
-        // TODO
+    public final boolean isImported() {
+        return attributes.stream().anyMatch(Attribute::isInFk);
+    }
+
+    @Override
+    public final boolean isDate() {
         return false;
     }
 
     @Override
-    final public boolean isDate() {
-        return false;
-    }
-
-    @Override
-    final public boolean isEnum() {
+    public final boolean isEnum() {
         return false;
     }
 
@@ -97,10 +96,10 @@ public class CompositePrimaryKey extends ClassNamer implements PrimaryKey {
 
     @Override
     public String toString() {
-        String ret = "[" + entity.getName() + "]";
+        StringBuilder result = new StringBuilder().append('[').append(entity.getName()).append(']');
         for (Attribute attribute : attributes) {
-            ret += attribute.getName() + ",";
+            result.append(attribute.getName()).append(',');
         }
-        return ret;
+        return result.toString();
     }
 }

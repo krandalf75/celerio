@@ -26,9 +26,12 @@ import org.springframework.stereotype.Service;
 @Service
 public class MetadataLoader extends AbstractJibxLoader<Metadata> {
 
+    private final Marshaller marshaller;
+
     @Autowired
-    @Qualifier("dbMetadataMarshaller")
-    private Marshaller marshaller;
+    public MetadataLoader(@Qualifier("dbMetadataMarshaller") Marshaller marshaller) {
+        this.marshaller = marshaller;
+    }
 
     public Marshaller getMarshaller() {
         return marshaller;

@@ -71,22 +71,12 @@ public class ValidationRelation implements RelationSpi {
             return "";
         }
 
-        if (relation.isMandatory() && !relation.hasInverse()) {
-            if (relation.getFromEntity().getName().equals(relation.getToEntity().getName())) {
-                // TODO ?: mandatory relation on self is complicated to handled
-                // in tests (model generator)... so we just ignore it.
-                return "";
-            }
-
-            if (relation.getFromAttribute().isInPk()) {
-                // TODO: not sure why, but integration tests fail if we don't skip this case.
-                return "";
-            }
-
-            ImportsContext.addImport("javax.validation.constraints.NotNull");
-            return "@NotNull";
-        } else {
+        if (!relation.isMandatory() || relation.hasInverse()
+                || relation.getFromEntity().getName().equals(relation.getToEntity().getName())
+                || relation.getFromAttribute().isInPk()) {
             return "";
         }
+        ImportsContext.addImport("javax.validation.constraints.NotNull");
+        return "@NotNull";
     }
 }

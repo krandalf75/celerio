@@ -27,7 +27,7 @@ public class SimpleOneToMany extends SimpleRelation {
     }
 
     @Override
-    final public boolean isOneToMany() {
+    public final boolean isOneToMany() {
         return true;
     }
 

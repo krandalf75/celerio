@@ -17,7 +17,6 @@
 package com.jaxio.celerio.configuration.database;
 
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import org.springframework.util.Assert;
 
 import java.util.List;
@@ -26,12 +25,15 @@ import static com.google.common.collect.Lists.newArrayList;
 import static com.jaxio.celerio.configuration.Util.nonNull;
 
 @Getter
-@NoArgsConstructor
 public class IndexHolder {
     protected List<Index> indexes = newArrayList();
     private String name;
-    private String tableName;
+    private final String tableName;
     private boolean isNonUnique;
+
+    public IndexHolder() {
+        this(null);
+    }
 
     public IndexHolder(String tableName) {
         this.tableName = tableName;
@@ -42,7 +44,7 @@ public class IndexHolder {
     }
 
     public void addIndexes(List<Index> indexes) {
-        Assert.isTrue(indexes.size() > 0, "there must be at least one index");
+        Assert.isTrue(!indexes.isEmpty(), "there must be at least one index");
         for (Index index : indexes) {
             addIndex(index);
         }

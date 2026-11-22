@@ -19,6 +19,7 @@ package com.jaxio.celerio.model.support;
 import com.jaxio.celerio.model.Attribute;
 import com.jaxio.celerio.support.AbstractNamer;
 import com.jaxio.celerio.util.MiscUtil;
+import lombok.AccessLevel;
 import lombok.Getter;
 
 import java.util.List;
@@ -28,18 +29,25 @@ import static com.google.common.collect.Lists.newArrayList;
 @Getter
 public class AttributeBundle extends AbstractNamer {
 
-    private List<Attribute> attributes = newArrayList();
-    private String base;
-    private String var;
-    private String type;
-    private String packageName;
+    private final List<Attribute> attributes = newArrayList();
+    private final String base;
+    @Getter(AccessLevel.NONE)
+    private final String propertyName;
+    private final String type;
+    private final String packageName;
 
+    @SuppressWarnings("java:S6832") // The model creates this helper directly for each entity or attribute.
     public AttributeBundle(Attribute firstAttribute) {
         base = firstAttribute.getColumnNameWithoutLanguage();
-        var = MiscUtil.toVar(base); // TODO: apply field naming (see columnConfig Factory)
+        propertyName = MiscUtil.toVar(base);
         type = firstAttribute.getType();
         packageName = firstAttribute.getPackageName();
         addAttribute(firstAttribute);
+    }
+
+    @Override
+    public String getVar() {
+        return propertyName;
     }
 
     public void addAttribute(Attribute attribute) {

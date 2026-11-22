@@ -24,9 +24,11 @@ import org.springframework.util.Assert;
 import java.io.File;
 import java.io.Serializable;
 
+@SuppressWarnings("java:S9438") // XStream populates these fields when reading generated.xml.
 public class FileMetaData implements Serializable {
     private static final long serialVersionUID = 1L;
 
+    @SuppressWarnings("unused") // Persisted by XStream in generated.xml.
     private String pack;
     private String template;
     private long size;
@@ -88,7 +90,7 @@ public class FileMetaData implements Serializable {
     }
 
     @Override
-    final public String toString() {
+    public final String toString() {
         return path + " " + size + " " + lastMod;
     }
 }

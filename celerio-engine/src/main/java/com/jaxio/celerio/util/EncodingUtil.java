@@ -16,12 +16,16 @@
 
 package com.jaxio.celerio.util;
 
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static com.google.common.collect.Lists.newArrayList;
 
 public class EncodingUtil {
+
+    private EncodingUtil() {
+    }
+
     private static List<String> isoAccents = newArrayList("¡", "¢", "£", "¤", "¥", "¦", "§", "¨", "©", "ª", "«", "¬", "&", "®", ",", "¯", "°", "±", "²", "³",
             "´", "µ", "¶", "·", "¸", "¹", "º", "»", "¼", "½", "¾", "¿", "×", "÷", "À", "Á", "Â", "Ã", "Ä", "Å", "Æ", "Ç", "È", "É", "Ê", "Ë", "Ì", "Í", "Î",
             "Ï", "Ð", "Ñ", "Ò", "Ó", "Ô", "Õ", "Ö", "Ø", "Ù", "Ú", "Û", "Ü", "Ý", "Þ", "ß", "à", "á", "â", "ã", "ä", "å", "æ", "ç", "è", "é", "ê", "ë", "ì",
@@ -35,11 +39,7 @@ public class EncodingUtil {
         }
         for (String iso : isoInUtf8) {
             if (original.contains(iso)) {
-                try {
-                    return new String(original.getBytes("ISO-8859-1"));
-                } catch (UnsupportedEncodingException e) {
-                    e.printStackTrace();
-                }
+                return new String(original.getBytes(StandardCharsets.ISO_8859_1));
             }
         }
         return original;
@@ -48,11 +48,7 @@ public class EncodingUtil {
     private static List<String> buildErrors(List<String> isoAccents) {
         List<String> ret = newArrayList();
         for (String isoAccent : isoAccents) {
-            try {
-                ret.add(new String(isoAccent.getBytes(), "ISO-8859-1"));
-            } catch (UnsupportedEncodingException e) {
-                e.printStackTrace();
-            }
+            ret.add(new String(isoAccent.getBytes(), StandardCharsets.ISO_8859_1));
         }
         return ret;
     }

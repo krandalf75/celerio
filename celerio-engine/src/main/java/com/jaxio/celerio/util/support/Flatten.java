@@ -16,6 +16,7 @@
 
 package com.jaxio.celerio.util.support;
 
+@SuppressWarnings("java:S115") // Keep the established names exposed by the list-holder API.
 public enum Flatten {
     above, up_to_root, down_to_leave, all;
 }

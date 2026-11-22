@@ -23,8 +23,8 @@ import com.jaxio.celerio.support.AbstractNamer;
 import static org.apache.commons.lang.StringUtils.stripToNull;
 
 public class ArbitraryClassNamer extends AbstractNamer {
-    private Entity entity;
-    private String suffix;
+    private final Entity entity;
+    private final String suffix;
     private GeneratedPackage generatedPackage;
 
     public ArbitraryClassNamer(Entity entity, String suffix) {

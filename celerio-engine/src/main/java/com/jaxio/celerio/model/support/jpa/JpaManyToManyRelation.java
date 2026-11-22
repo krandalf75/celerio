@@ -142,8 +142,9 @@ public class JpaManyToManyRelation implements RelationSpi, PackageImportAdder {
             return null;
         }
         // we have many many to many relations ? and one requires eager, then we need to set the fetchmode
-        for (Relation relation : manyToManyRelations) {
-            if (relation.getFetchTypeGetter() != null && relation.getFetchTypeGetter().getFetch() != null && relation.getFetchTypeGetter().getFetch().isEager()) {
+        for (Relation candidate : manyToManyRelations) {
+            if (candidate.getFetchTypeGetter() != null && candidate.getFetchTypeGetter().getFetch() != null
+                    && candidate.getFetchTypeGetter().getFetch().isEager()) {
                 addImport("org.hibernate.annotations.Fetch");
                 addImport("org.hibernate.annotations.FetchMode");
                 return "@Fetch(value = FetchMode.SUBSELECT)";

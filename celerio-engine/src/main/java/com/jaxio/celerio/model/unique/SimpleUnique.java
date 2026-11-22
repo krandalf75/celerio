@@ -27,9 +27,9 @@ import static java.util.Collections.unmodifiableList;
 
 @Getter
 public class SimpleUnique implements Unique {
-    private Attribute attribute;
-    private List<Attribute> attributes;
-    private String name;
+    private final Attribute attribute;
+    private final List<Attribute> attributes;
+    private final String name;
 
     public SimpleUnique(String name, Attribute attribute) {
         this.name = name;

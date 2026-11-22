@@ -32,7 +32,7 @@ public class SimpleOneToVirtualOne extends SimpleRelation {
     }
 
     @Override
-    final public boolean isOneToVirtualOne() {
+    public final boolean isOneToVirtualOne() {
         return true;
     }
 

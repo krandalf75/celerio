@@ -76,20 +76,12 @@ public class SearchAttribute extends AbstractAttributeSpi {
         if (name != null && !IndexedFieldDefaults.name.equals(name)) {
             attributes.add("name = " + name);
         }
-        // store
-        Store store = field.getStore();
-        if (store != null && store != IndexedFieldDefaults.store) {
-            addImport("org.hibernate.search.annotations.Store");
-            attributes.add("store = Store." + store.name());
-        } else if (attribute.isFile()) {
-            addImport("org.hibernate.search.annotations.Store");
-            attributes.add("store = Store.YES");
-        }
+        addStoreAttribute(attributes, field.getStore());
         // index
         Boolean index = field.getIndex();
-        if (index != null && index != IndexedFieldDefaults.index) {
+        if (index != null && !index.equals(IndexedFieldDefaults.index)) {
             addImport("org.hibernate.search.annotations.Index");
-            attributes.add("index = Index." + (index == true ? "YES" : "NO"));
+            attributes.add("index = Index." + (index ? "YES" : "NO"));
         }
         // analyze
         Analyze analyze = field.getAnalyze();
@@ -99,13 +91,8 @@ public class SearchAttribute extends AbstractAttributeSpi {
         }
         // analyzer
         String analyzer = field.getAnalyzer();
-        if (analyzer != null) {
-            addImport("org.hibernate.search.annotations.Analyzer");
-            attributes.add("analyzer = @Analyzer(definition = \"" + analyzer + "\")");
-        } else {
-            addImport("org.hibernate.search.annotations.Analyzer");
-            attributes.add("analyzer = @Analyzer(definition = \"custom\")");
-        }
+        addImport("org.hibernate.search.annotations.Analyzer");
+        attributes.add("analyzer = @Analyzer(definition = \"" + (analyzer == null ? "custom" : analyzer) + "\")");
         // norms
         Norms norms = field.getNorms();
         if (norms != null && norms != IndexedFieldDefaults.norms) {
@@ -121,6 +108,16 @@ public class SearchAttribute extends AbstractAttributeSpi {
 
         addImport("org.hibernate.search.annotations.Field");
         return attributes.bindAttributesTo("@Field");
+    }
+
+    private void addStoreAttribute(AttributeBuilder attributes, Store store) {
+        if (store != null && store != IndexedFieldDefaults.store) {
+            addImport("org.hibernate.search.annotations.Store");
+            attributes.add("store = Store." + store.name());
+        } else if (attribute.isFile()) {
+            addImport("org.hibernate.search.annotations.Store");
+            attributes.add("store = Store.YES");
+        }
     }
 
     public String getFieldBridgeAnnotation() {

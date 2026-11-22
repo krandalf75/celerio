@@ -16,34 +16,11 @@
 
 package com.jaxio.celerio.configuration.database.mysql;
 
-import org.junit.Ignore;
 import org.junit.Test;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.SingleConnectionDataSource;
-import org.springframework.jdbc.support.rowset.SqlRowSet;
 
 import static org.fest.assertions.Assertions.assertThat;
 
 public class MySqlEnumExtractorTest {
-    private JdbcTemplate jdbcTemplate() {
-        return new JdbcTemplate(new SingleConnectionDataSource("jdbc:mysql://localhost/sakila", "root", "root", true));
-    }
-
-    @Test
-    @Ignore
-    public void film() {
-        SqlRowSet queryForRowSet = jdbcTemplate().queryForRowSet("show columns from film where type like 'enum%'");
-        while (queryForRowSet.next()) {
-            String field = queryForRowSet.getString("Field");
-            String type = queryForRowSet.getString("Type");
-            MysqlEnumValuesExtractor mysqlEnumValuesExtractor = new MysqlEnumValuesExtractor();
-            System.out.println("Extracting values from " + field + "." + type);
-            for (String a : mysqlEnumValuesExtractor.extract(type)) {
-                System.out.println(a);
-            }
-        }
-    }
-
     @Test
     public void nothing() {
         assertThat(new MysqlEnumValuesExtractor().extract("not an enum")) //

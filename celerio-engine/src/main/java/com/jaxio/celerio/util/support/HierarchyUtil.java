@@ -24,6 +24,9 @@ import static com.google.common.collect.Lists.newArrayList;
 
 public class HierarchyUtil {
 
+    private HierarchyUtil() {
+    }
+
     public static <T, H extends Hierarchical<H>> Iterable<T> flattenDownToLeaves(H node, ListGetter<T, H> listGetter) {
         List<T> ret = newArrayList();
         recursiveFlattenDownToLeaves(node, listGetter, ret);

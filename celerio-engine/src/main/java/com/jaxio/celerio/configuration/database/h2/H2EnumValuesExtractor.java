@@ -22,7 +22,7 @@ import java.util.List;
 
 public class H2EnumValuesExtractor {
     private static final String H2_ENUM_VALUES = "^\\(\\p{Graph}*\\p{Blank}*IN\\((.*)\\)\\)$";
-    private EnumExtractor enumExtractor = new EnumExtractor(H2_ENUM_VALUES);
+    private final EnumExtractor enumExtractor = new EnumExtractor(H2_ENUM_VALUES);
 
     public List<String> extract(String content) {
         return enumExtractor.extract(content);

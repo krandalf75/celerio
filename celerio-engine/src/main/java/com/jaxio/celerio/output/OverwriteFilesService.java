@@ -28,8 +28,8 @@ import static com.jaxio.celerio.convention.WellKnownFolder.JAVA_TEST;
 @Service
 public class OverwriteFilesService {
 
-    private List<String> excludedPatterns = newArrayList("pom.xml");
-    private List<WellKnownFolder> excludedFolders = newArrayList(JAVA, JAVA_TEST);
+    private final List<String> excludedPatterns = newArrayList("pom.xml");
+    private final List<WellKnownFolder> excludedFolders = newArrayList(JAVA, JAVA_TEST);
 
     public boolean canOverwrite(String file) {
         for (String pattern : excludedPatterns) {

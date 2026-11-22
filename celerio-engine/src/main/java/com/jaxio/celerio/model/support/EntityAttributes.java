@@ -42,10 +42,12 @@ public class EntityAttributes extends CurrentAndFlatListHolder<Attribute, Entity
         setSortProperty(attributeOrder.attributeSortProperty());
     }
 
+    @SuppressWarnings("java:S4738") // Template packs use these Guava predicate types.
     public EntityAttributes(Entity entity, ListGetter<Attribute, Entity> listGetter, Predicate<Attribute> predicate) {
         this(entity, listGetter, predicate, AttributeOrder.DISPLAY);
     }
 
+    @SuppressWarnings("java:S4738") // Template packs use these Guava predicate types.
     public EntityAttributes(Entity entity, ListGetter<Attribute, Entity> listGetter, Predicate<Attribute> predicate,  AttributeOrder attributeOrder) {
         super(entity, listGetter, predicate);
         setSortProperty(attributeOrder.attributeSortProperty());

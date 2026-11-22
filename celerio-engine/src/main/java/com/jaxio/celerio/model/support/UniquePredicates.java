@@ -22,20 +22,15 @@ import com.jaxio.celerio.model.Unique;
 import static com.google.common.base.Predicates.and;
 import static com.google.common.base.Predicates.not;
 
+@SuppressWarnings("java:S4738") // Template packs use these Guava predicate types.
 public class UniquePredicates {
-    public static Predicate<Unique> COMPOSITE_UNIQUE = new Predicate<Unique>() {
-        @Override
-        public boolean apply(Unique unique) {
-            return unique.getAttributes().size() > 1;
-        }
-    };
 
-    public static Predicate<Unique> SIMPLE_PK_UNIQUE = new Predicate<Unique>() {
-        @Override
-        public boolean apply(Unique unique) {
-            return unique.getAttributes().size() == 1 && unique.getAttributes().get(0).isSimplePk();
-        }
-    };
+    private UniquePredicates() {
+    }
+
+    public static Predicate<Unique> COMPOSITE_UNIQUE = unique -> unique.getAttributes().size() > 1;
+
+    public static Predicate<Unique> SIMPLE_PK_UNIQUE = unique -> unique.getAttributes().size() == 1 && unique.getAttributes().get(0).isSimplePk();
 
     public static Predicate<Unique> SIMPLE_UNIQUE = and(not(COMPOSITE_UNIQUE), not(SIMPLE_PK_UNIQUE));
 }

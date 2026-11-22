@@ -20,7 +20,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
@@ -34,6 +33,9 @@ import java.util.Map;
 @Slf4j
 public class GITStatusCrawler {
 
+    private GITStatusCrawler() {
+    }
+
     public static boolean isProjectUnderGit(File baseDir) {
         File dirHack = new File(baseDir, ".celerio-please-ignore-git");
         if (dirHack.exists()) {
@@ -45,12 +47,11 @@ public class GITStatusCrawler {
     }
 
     public static SCMStatus doStatus(File baseDir) throws RuntimeException {
-        try {
+        FileRepositoryBuilder builder = new FileRepositoryBuilder().setGitDir(new File(baseDir, ".git"));
+        try (Repository repository = builder.build();
+             TreeWalk treeWalk = new TreeWalk(repository)) {
             Map<String, Boolean> map = new HashMap<String, Boolean>();
 
-            FileRepositoryBuilder builder = new FileRepositoryBuilder();
-            Repository repository = builder.setGitDir(new File(baseDir, ".git")).build();
-            TreeWalk treeWalk = new TreeWalk(repository);
             treeWalk.addTree(getTree(repository));
             treeWalk.setRecursive(true);
             while (treeWalk.next()) {
@@ -70,12 +71,8 @@ public class GITStatusCrawler {
     private static RevTree getTree(Repository repository) throws IOException {
         ObjectId lastCommitId = repository.resolve(Constants.HEAD);
 
-        // a RevWalk allows to walk over commits based on some filtering
-        RevWalk revWalk = new RevWalk(repository);
-        RevCommit commit = revWalk.parseCommit(lastCommitId);
-
-        // and using commit's tree find the path
-        RevTree tree = commit.getTree();
-        return tree;
+        try (RevWalk revWalk = new RevWalk(repository)) {
+            return revWalk.parseCommit(lastCommitId).getTree();
+        }
     }
 }

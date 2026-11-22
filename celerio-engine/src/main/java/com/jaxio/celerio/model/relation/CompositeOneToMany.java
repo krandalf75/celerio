@@ -29,7 +29,7 @@ public class CompositeOneToMany extends CompositeRelation {
     }
 
     @Override
-    final public boolean isOneToMany() {
+    public final boolean isOneToMany() {
         return true;
     }
 

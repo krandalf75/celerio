@@ -30,124 +30,72 @@ import static java.util.Collections.emptyList;
 
 public class EntityListGetters {
 
-    public static ListGetter<Attribute, Entity> LOCALIZABLE_TO_DISPLAY_STRING_ATTRIBUTES = new ListGetter<Attribute, Entity>() {
-        @Override
-        public List<Attribute> getList(Entity o) {
-            List<Attribute> result = newArrayList();
-            for (Attribute a : o.printerAttributes()) {
-                if (a.isLocalizable()) {
-                    result.add(a);
-                }
+    private EntityListGetters() {
+    }
+
+    public static ListGetter<Attribute, Entity> LOCALIZABLE_TO_DISPLAY_STRING_ATTRIBUTES = o -> {
+        List<Attribute> result = newArrayList();
+        for (Attribute a : o.printerAttributes()) {
+            if (a.isLocalizable()) {
+                result.add(a);
             }
-            return result;
         }
+        return result;
     };
 
-    public static ListGetter<Attribute, Entity> PRINTER_ATTRIBUTES = new ListGetter<Attribute, Entity>() {
-        @Override
-        public List<Attribute> getList(Entity o) {
-            return o.printerAttributes();
-        }
-    };
+    public static ListGetter<Attribute, Entity> PRINTER_ATTRIBUTES = Entity::printerAttributes;
 
-    public static ListGetter<Attribute, Entity> STRING_PRINTER_ATTRIBUTES = new ListGetter<Attribute, Entity>() {
-        @Override
-        public List<Attribute> getList(Entity o) {
-            return o.stringPrinterAttributes();
-        }
-    };
+    public static ListGetter<Attribute, Entity> STRING_PRINTER_ATTRIBUTES = Entity::stringPrinterAttributes;
 
-    public static ListGetter<Attribute, Entity> INDEXED_PRINTER_ATTRIBUTES = new ListGetter<Attribute, Entity>() {
-        @Override
-        public List<Attribute> getList(Entity o) {
-            return o.indexedPrinterAttributes();
-        }
-    };
+    public static ListGetter<Attribute, Entity> INDEXED_PRINTER_ATTRIBUTES = Entity::indexedPrinterAttributes;
 
-    public static ListGetter<Attribute, Entity> ATTRIBUTES = new ListGetter<Attribute, Entity>() {
-        @Override
-        public List<Attribute> getList(Entity o) {
-            return o.getCurrentAttributes();
-        }
-    };
+    public static ListGetter<Attribute, Entity> ATTRIBUTES = Entity::getCurrentAttributes;
 
-    public static ListGetter<Attribute, Entity> PK_ATTRIBUTES = new ListGetter<Attribute, Entity>() {
-        @Override
-        public List<Attribute> getList(Entity o) {
+    public static ListGetter<Attribute, Entity> PK_ATTRIBUTES = o -> o.getPrimaryKey().getAttributes();
+
+    public static ListGetter<Attribute, Entity> CPK_ATTRIBUTES = o -> {
+        if (o.hasCompositePk()) {
             return o.getPrimaryKey().getAttributes();
+        } else {
+            return emptyList();
         }
     };
 
-    public static ListGetter<Attribute, Entity> CPK_ATTRIBUTES = new ListGetter<Attribute, Entity>() {
-        @Override
-        public List<Attribute> getList(Entity o) {
-            if (o.hasCompositePk()) {
-                return o.getPrimaryKey().getAttributes();
-            } else {
-                return emptyList();
-            }
+    public static ListGetter<Attribute, Entity> ATTRIBUTES_AND_PK_ATTRIBUTES = o -> {
+        List<Attribute> result = newArrayList();
+        result.addAll(o.getCurrentAttributes());
+        if (!o.isRoot()) {
+            result.addAll(o.getRoot().getPrimaryKey().getAttributes());
         }
+        return result;
     };
 
-    public static ListGetter<Attribute, Entity> ATTRIBUTES_AND_PK_ATTRIBUTES = new ListGetter<Attribute, Entity>() {
-        @Override
-        public List<Attribute> getList(Entity o) {
-            List<Attribute> result = newArrayList();
-            result.addAll(o.getCurrentAttributes());
-            if (!o.isRoot()) {
-                result.addAll(o.getRoot().getPrimaryKey().getAttributes());
-            }
-            return result;
+    public static ListGetter<Entity, Entity> HIERARCHY_ATTRIBUTES = o -> newArrayList(o.getParent());
+
+    public static ListGetter<Entity, Entity> RELATED_ENTITIES = entity -> {
+        ArrayList<Entity> ret = newArrayList(entity);
+        for (Relation relation : entity.getRelations().getList()) {
+            ret.add(relation.getToEntity());
         }
+        return ret;
     };
 
-    public static ListGetter<Entity, Entity> HIERARCHY_ATTRIBUTES = new ListGetter<Entity, Entity>() {
-        @Override
-        public List<Entity> getList(Entity o) {
-            return newArrayList(o.getParent());
-        }
-    };
+    public static ListGetter<Relation, Entity> RELATIONS = Entity::getCurrentRelations;
 
-    public static ListGetter<Entity, Entity> RELATED_ENTITIES = new ListGetter<Entity, Entity>() {
-        @Override
-        public List<Entity> getList(Entity entity) {
-            ArrayList<Entity> ret = newArrayList(entity);
-            for (Relation relation : entity.getRelations().getList()) {
-                ret.add(relation.getToEntity());
-            }
-            return ret;
-        }
-    };
+    public static ListGetter<Unique, Entity> UNIQUES = Entity::getCurrentUniques;
 
-    public static ListGetter<Relation, Entity> RELATIONS = new ListGetter<Relation, Entity>() {
-        @Override
-        public List<Relation> getList(Entity o) {
-            return o.getCurrentRelations();
-        }
-    };
-
-    public static ListGetter<Unique, Entity> UNIQUES = new ListGetter<Unique, Entity>() {
-        @Override
-        public List<Unique> getList(Entity o) {
-            return o.getCurrentUniques();
-        }
-    };
-
-    public static ListGetter<Attribute, Entity> SEARCH_RESULTS = new ListGetter<Attribute, Entity>() {
-        @Override
-        public List<Attribute> getList(Entity entity) {
-            ArrayList<Attribute> ret = newArrayList();
-            ret.addAll(entity.getSearchResultAttributesManual().getList());
-            if (ret.size() == 0) {
-                int left = 6;
-                for (Attribute attr : entity.getSearchResultAttributesConvention().getList()) {
-                    if (left > 0) {
-                        left--;
-                        ret.add(attr);
-                    }
+    public static ListGetter<Attribute, Entity> SEARCH_RESULTS = entity -> {
+        ArrayList<Attribute> ret = newArrayList();
+        ret.addAll(entity.getSearchResultAttributesManual().getList());
+        if (ret.isEmpty()) {
+            int left = 6;
+            for (Attribute attr : entity.getSearchResultAttributesConvention().getList()) {
+                if (left > 0) {
+                    left--;
+                    ret.add(attr);
                 }
             }
-            return ret;
         }
+        return ret;
     };
 }

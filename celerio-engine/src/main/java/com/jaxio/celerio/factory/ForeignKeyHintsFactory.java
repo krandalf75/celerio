@@ -34,8 +34,12 @@ import static com.google.common.collect.Lists.newArrayList;
 @Service
 @Slf4j
 public class ForeignKeyHintsFactory {
+    private final Config config;
+
     @Autowired
-    private Config config;
+    public ForeignKeyHintsFactory(Config config) {
+        this.config = config;
+    }
 
     private void addImportedKeyDefinedInConfig(Entity entity) {
         for (Attribute attribute : entity.getCurrentAttributes()) {
@@ -59,40 +63,38 @@ public class ForeignKeyHintsFactory {
             Table table = config.getMetadata().getTableByName(tableName);
 
             for (ForeignKey fk : table.getForeignKeys()) {
-                // skip filtered table
-                if (!config.getCelerio().getConfiguration().hasTable(fk.getImportedKey().getPkTableName())) {
-                    continue;
-                }
-
-                if (fk.isSimple()) {
-                    Attribute fkAttribute = entity.getAttributeByTableAndColumnName(fk.getFkTableName(), fk.getImportedKey().getFkColumnName());
-                    if (fkAttribute == null) {
-                        continue;
-                    }
-                    fkAttribute.setSimpleFk(true);
-
-                } else if (fk.isComposite()) {
-                    List<Attribute> attributesInFk = newArrayList();
-
-                    for (ImportedKey fkItem : fk.getImportedKeys()) {
-                        Attribute fkAttribute = entity.getAttributeByTableAndColumnName(fk.getFkTableName(), fkItem.getFkColumnName());
-                        if (fkAttribute != null) {
-                            attributesInFk.add(fkAttribute);
-                        }
-                    }
-
-                    if (fk.getSize() == attributesInFk.size()) {
-                        for (Attribute attributeInFk : attributesInFk) {
-                            attributeInFk.setInCompositeFk(true);
-                        }
-                    } else if (attributesInFk.size() > 0) {
-                        log.warn("Ignoring composite FK spread accross entity hierarchy: " + fk.getName());
-                    }
-
-                } else {
-                    throw new IllegalStateException("Should not happen");
+                if (config.getCelerio().getConfiguration().hasTable(fk.getImportedKey().getPkTableName())) {
+                    markForeignKeyAttributes(entity, fk);
                 }
             }
+        }
+    }
+
+    private void markForeignKeyAttributes(Entity entity, ForeignKey fk) {
+        if (fk.isSimple()) {
+            Attribute attribute = entity.getAttributeByTableAndColumnName(fk.getFkTableName(), fk.getImportedKey().getFkColumnName());
+            if (attribute != null) {
+                attribute.setSimpleFk(true);
+            }
+        } else if (fk.isComposite()) {
+            markCompositeForeignKeyAttributes(entity, fk);
+        } else {
+            throw new IllegalStateException("Foreign key " + fk.getName() + " has no columns");
+        }
+    }
+
+    private void markCompositeForeignKeyAttributes(Entity entity, ForeignKey fk) {
+        List<Attribute> attributes = newArrayList();
+        for (ImportedKey column : fk.getImportedKeys()) {
+            Attribute attribute = entity.getAttributeByTableAndColumnName(fk.getFkTableName(), column.getFkColumnName());
+            if (attribute != null) {
+                attributes.add(attribute);
+            }
+        }
+        if (fk.getSize() == attributes.size()) {
+            attributes.forEach(attribute -> attribute.setInCompositeFk(true));
+        } else if (!attributes.isEmpty()) {
+            log.warn("Ignoring composite FK spread across entity hierarchy: " + fk.getName());
         }
     }
 

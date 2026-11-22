@@ -29,7 +29,7 @@ public class IntermediateOneToMany extends AbstractIntermediateRelation {
     }
 
     @Override
-    final public boolean isOneToMany() {
+    public final boolean isOneToMany() {
         return true;
     }
 }

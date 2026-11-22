@@ -40,7 +40,6 @@ public class SpringMVCAttribute implements AttributeSpi {
         return this;
     }
 
-    // TODO : fix the isInFk for pureMany2Many
     public String getTagName() {
         if (attribute.isHidden() && !attribute.isFile()) {
             return "hidden";
@@ -122,10 +121,10 @@ public class SpringMVCAttribute implements AttributeSpi {
     }
 
     private void addClass(StringBuffer ret, String cssClass) {
-        if (cssClass == null || cssClass.length() == 0) {
+        if (cssClass == null || cssClass.isEmpty()) {
             return;
         }
-        if (ret.length() != 0) {
+        if (!ret.isEmpty()) {
             ret.append(" ");
         }
         ret.append(cssClass);

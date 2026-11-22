@@ -16,9 +16,10 @@
 
 package com.jaxio.celerio.util.support;
 
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.jaxio.celerio.util.Named;
+
+import java.util.Objects;
+import java.util.function.Predicate;
 
 import static com.google.common.collect.Iterables.filter;
 
@@ -26,29 +27,27 @@ import static com.google.common.collect.Iterables.filter;
  * A list holder whose underlying List is built out of an Iterable and a predicate.
  */
 public class SimpleListHolder<T extends Named> extends AbstractListHolder<T> {
-    private Iterable<T> original;
-    private Predicate<T> filter;
+    private final Iterable<T> original;
+    private final Predicate<T> filter;
 
     public SimpleListHolder(Iterable<T> original) {
-        assert original != null;
-        this.original = original;
-        this.filter = Predicates.<T>alwaysTrue(); // using static import breaks compilation
+        this(original, ignored -> true);
     }
 
-    public SimpleListHolder(Iterable<T> original, Predicate<T> filter) {
-        assert original != null;
-        assert filter != null;
-        this.original = original;
-        this.filter = filter;
+    @SuppressWarnings("java:S4738") // Existing template packs pass Guava predicates.
+    public SimpleListHolder(Iterable<T> original, com.google.common.base.Predicate<T> filter) {
+        this.original = Objects.requireNonNull(original, "original");
+        this.filter = Objects.requireNonNull(filter, "filter")::apply;
     }
 
-    public SimpleListHolder(Iterable<T> original, Predicate<T> filter, String sortProperty) {
+    @SuppressWarnings("java:S4738") // Existing template packs pass Guava predicates.
+    public SimpleListHolder(Iterable<T> original, com.google.common.base.Predicate<T> filter, String sortProperty) {
         this(original, filter);
         setSortProperty(sortProperty);
     }
 
     @Override
     protected Iterable<T> getIterable() {
-        return filter(original, filter);
+        return filter(original, filter::test);
     }
 }

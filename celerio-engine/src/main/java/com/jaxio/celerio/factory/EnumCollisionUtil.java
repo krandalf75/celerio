@@ -30,7 +30,7 @@ import static com.google.common.collect.Sets.newHashSet;
 @Slf4j
 public class EnumCollisionUtil {
 
-    private Set<String> enumNames = newHashSet();
+    private final Set<String> enumNames = newHashSet();
 
     private void addName(String enumName) {
         enumNames.add(clashKey(enumName));

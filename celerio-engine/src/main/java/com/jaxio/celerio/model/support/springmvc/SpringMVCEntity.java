@@ -33,6 +33,18 @@ public class SpringMVCEntity implements EntitySpi {
     private Namer converter;
     private Namer restController;
 
+    public Namer getFormatter() {
+        return formatter;
+    }
+
+    public Namer getConverter() {
+        return converter;
+    }
+
+    public Namer getRestController() {
+        return restController;
+    }
+
     /**
      * @return "springMvc";
      */

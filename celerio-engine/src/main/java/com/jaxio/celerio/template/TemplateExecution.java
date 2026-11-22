@@ -41,9 +41,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static com.google.common.collect.Lists.newArrayList;
 import static com.jaxio.celerio.convention.WellKnownFolder.*;
 import static java.lang.Boolean.TRUE;
@@ -68,16 +70,24 @@ public class TemplateExecution {
     private static String JAVA_FILE_EXTENSION = ".java";
     private static String XML_FILE_EXTENSION = ".xml";
 
-    @Autowired
     @Setter
     private PreviousEngine previousEngine;
-    @Autowired
-    private Config config;
+    private final Config config;
     @Getter
     private String module;
 
     private TemplatePack templatePack;
     private Template template;
+
+    public TemplateExecution() {
+        this(null, null);
+    }
+
+    @Autowired
+    public TemplateExecution(PreviousEngine previousEngine, Config config) {
+        this.previousEngine = previousEngine;
+        this.config = config;
+    }
 
     // ------------------------------------------------------------
     // public methods below are called from templates to set
@@ -319,7 +329,7 @@ public class TemplateExecution {
             throw new IllegalStateException("You cannot set a header before setting the output filename");
         }
         HeaderComment headerComment = config.getCelerio().getConfiguration().getHeaderComment();
-        if (!headerComment.getInclude()) {
+        if (!Boolean.TRUE.equals(headerComment.getInclude())) {
             return "";
         }
         CommentStyle commentStyle = CommentStyle.fromFilename(currentFilename);
@@ -373,6 +383,7 @@ public class TemplateExecution {
         return previousEngine.getCurrentRootCast(generic1, generic2, generic3);
     }
 
+    @SuppressWarnings("java:S100") // Existing template packs call this method by name.
     public String getCurrentClassWithout_() {
         return previousEngine.getCurrentClassWithout_();
     }
@@ -546,13 +557,13 @@ public class TemplateExecution {
             }
         } else {
             if (fullTypes.length > 1) {
-                sb.append("// Make sure you use these " + fullTypes.length + " annotations in your subclass").append("\n");
+                sb.append("// Make sure you use these ").append(fullTypes.length).append(" annotations in your subclass\n");
             } else {
                 sb.append("// Make sure you use this annotation in your subclass").append("\n");
             }
 
             for (String fullType : fullTypes) {
-                sb.append("// ").append("@" + fullType).append("\n");
+                sb.append("// @").append(fullType).append('\n');
             }
         }
         return sb.toString();
@@ -611,16 +622,16 @@ public class TemplateExecution {
         try {
             // we create automatically the take over only if the user has not himself for whatever reason 
             // taken over the meta model. BDF reported it as EVOSOCLE-283
-            String potentialUserCreatedMetaModelPath = JAVA.getFolder() + "/" + entityModel.getPath() + "/" + entityModel.getType() + "_.java";
+            String metamodelFilename = entityModel.getType() + "_.java";
+            String potentialUserCreatedMetaModelPath = Path.of(JAVA.getFolder(), entityModel.getPath(), metamodelFilename).toString();
 
             if (new File(previousEngine.getOutputResult().getUserSource().getFullPath(potentialUserCreatedMetaModelPath)).exists()) {
                 log.info("Skip automatic take over for metamodel " + entityModel.getType() + " since it was done by the developer");
                 return;
             }
 
-            String filePath = JAVA.getGeneratedFolder() + "/" + entityModel.getPath() + "/" + entityModel.getType() + "_.java";
-            filePath = filePath.replace("/", "" + File.separatorChar);
-            previousEngine.getOutputResult().addContent(content.getBytes("UTF-8"), filePath, null, null);
+            String filePath = Path.of(JAVA.getGeneratedFolder(), entityModel.getPath(), metamodelFilename).toString();
+            previousEngine.getOutputResult().addContent(content.getBytes(UTF_8), filePath, null, null);
             log.info("Automatic take over for metamodel " + entityModel.getType() + " to be in sync with entity taken over.");
         } catch (Exception e) {
             throw new RuntimeException(e);

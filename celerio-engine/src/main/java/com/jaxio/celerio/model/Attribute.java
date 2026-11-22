@@ -51,7 +51,6 @@ import java.util.*;
 
 import static com.google.common.base.Predicates.and;
 import static com.google.common.collect.Iterables.find;
-import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Maps.newHashMap;
 import static com.jaxio.celerio.configuration.Module.CHAR_PADDING;
 import static com.jaxio.celerio.configuration.database.JdbcType.CHAR;
@@ -72,17 +71,31 @@ import static org.springframework.beans.factory.config.BeanDefinition.SCOPE_PROT
 @Scope(SCOPE_PROTOTYPE)
 @Getter
 public class Attribute extends AbstractNamer implements Named, Map<String, Object> {
-    @Autowired
-    private Config config;
-    @Autowired
-    private RelationCollisionUtil collisionUtil;
+    private final Config config;
+    private final RelationCollisionUtil collisionUtil;
+    final ForbiddenWhenBuildingAspect fwba;
     private Entity entity;
     private ColumnConfig columnConfig;
     private MappedType mappedType;
-    private JpaAttribute jpa = new JpaAttribute(this); // TODO: make it an SPI
+    private final JpaAttribute jpa = new JpaAttribute(this);
+
+    public Attribute() {
+        this(null, null, null);
+    }
+
+    @Autowired
+    public Attribute(Config config, RelationCollisionUtil collisionUtil, ForbiddenWhenBuildingAspect fwba) {
+        this.config = config;
+        this.collisionUtil = collisionUtil;
+        this.fwba = fwba;
+    }
 
     public void setEntity(Entity entity) {
         this.entity = entity;
+    }
+
+    public Entity getEntity() {
+        return entity;
     }
 
     public void setColumnConfig(ColumnConfig columnConfig) {
@@ -93,9 +106,6 @@ public class Attribute extends AbstractNamer implements Named, Map<String, Objec
     // -----------------------------------------------------
     // Namer override
     // -----------------------------------------------------
-    @Autowired
-    ForbiddenWhenBuildingAspect fwba;
-
     private String cachedVar;
 
     /**
@@ -349,10 +359,8 @@ public class Attribute extends AbstractNamer implements Named, Map<String, Objec
             return true;
         }
 
-        if (getColumnConfig().getSize() != null && getColumnConfig().getSize().equals(getColumnConfig().getMin())) {
-            return true;
-        }
-        return false;
+        Integer size = getColumnConfig().getSize();
+        return size != null && size.equals(getColumnConfig().getMin());
     }
 
     public String getComment() {
@@ -402,57 +410,54 @@ public class Attribute extends AbstractNamer implements Named, Map<String, Objec
     }
 
     public String getJavaDefaultValue() {
-        if (getColumnConfig().getDefaultValue() == null || isBlob()) {
+        String value = getColumnConfig().getDefaultValue();
+        if (value == null || isBlob()) {
             return null;
-        } else if (isEnum()) {
-            EnumConfig enumConfig = getColumnConfig().getEnumConfig();
-            if (enumConfig.isCustomType() || enumConfig.isOrdinal()) {
-                return getEnumClass() + "." + enumConfig.getEnumNameByValue(getColumnConfig().getDefaultValue());
-            } else {
-                return getEnumClass() + "." + getColumnConfig().getDefaultValue();
-            }
-        } else if (isString()) {
-            return "\"" + getColumnConfig().getDefaultValue() + "\"";
-        } else if (isBoolean()) {
-            if ("1".equals(getColumnConfig().getDefaultValue())) {
-                return "true";
-            } else {
-                return toBoolean(getColumnConfig().getDefaultValue()) ? "true" : "false";
-            }
-        } else if (isDate()) {
-            List<String> isNow = newArrayList("now()", "sysdate", "current_time");
-            if (isNow.contains(getColumnConfig().getDefaultValue().toLowerCase())) {
-                if (isLocalDateOrTime() || isZonedDateTime()) {
-                    return getMappedType().getJavaType() + ".now()"; // TODO: nice import
-                } else if (getMappedType() == MappedType.M_UTILDATE) {
-                    return "new " + getMappedType().getJavaType() + "()";
-                } else if (getMappedType() == MappedType.M_TIMESTAMP) {
-                    return "new Timestamp(new Date().getTime())";
-                }
-            }
-            return null;
-        } else if (isNumeric()) {
-            String defaultValue = getColumnConfig().getDefaultValue();
-            if (NumberUtils.isNumber(defaultValue)) {
-                if (isBigDecimal()) {
-                    return "new BigDecimal(\"" + defaultValue + "\")"; // use the right scale
-                } else if (isBigInteger()) {
-                    return "new BigInteger(\"" + defaultValue + "\")";
-                } else if (isLong()) {
-                    return defaultValue + "l";
-                } else if (isDouble()) {
-                    return defaultValue + "d"; // so it is considered as a double
-                } else if (isFloat()) {
-                    return defaultValue + "f"; // as by default it would be considered as a double
-                } else {
-                    return defaultValue;
-                }
-            } else {
-                return null;
-            }
-        } else {
-            return getColumnConfig().getDefaultValue();
         }
+        if (isEnum()) {
+            EnumConfig enumConfig = getColumnConfig().getEnumConfig();
+            String constant = enumConfig.isCustomType() || enumConfig.isOrdinal()
+                    ? enumConfig.getEnumNameByValue(value) : value;
+            return getEnumClass() + "." + constant;
+        }
+        if (isString()) {
+            return "\"" + value + "\"";
+        }
+        if (isBoolean()) {
+            return Boolean.toString("1".equals(value) || toBoolean(value));
+        }
+        if (isDate()) {
+            return getDateDefaultExpression(value);
+        }
+        return isNumeric() ? getNumericDefaultExpression(value) : value;
+    }
+
+    private String getDateDefaultExpression(String value) {
+        if (!Set.of("now()", "sysdate", "current_time").contains(value.toLowerCase())) {
+            return null;
+        }
+        if (isLocalDateOrTime() || isZonedDateTime()) {
+            return getMappedType().getJavaType() + ".now()";
+        }
+        return switch (getMappedType()) {
+            case M_UTILDATE -> "new " + getMappedType().getJavaType() + "()";
+            case M_TIMESTAMP -> "new Timestamp(new Date().getTime())";
+            default -> null;
+        };
+    }
+
+    private String getNumericDefaultExpression(String value) {
+        if (!NumberUtils.isNumber(value)) {
+            return null;
+        }
+        return switch (getMappedType()) {
+            case M_BIGDECIMAL -> "new BigDecimal(\"" + value + "\")";
+            case M_BIGINTEGER -> "new BigInteger(\"" + value + "\")";
+            case M_LONG -> value + "l";
+            case M_DOUBLE -> value + "d";
+            case M_FLOAT -> value + "f";
+            default -> value;
+        };
     }
 
     private String displayOrderAsString;
@@ -657,19 +662,19 @@ public class Attribute extends AbstractNamer implements Named, Map<String, Objec
     }
 
     public Attribute getFileSize() {
-        return findFileAttributeOrNull(IS_FILE_SIZE);
+        return findFileAttributeOrNull(IS_FILE_SIZE::apply);
     }
 
     public Attribute getFileContentType() {
-        return findFileAttributeOrNull(IS_FILE_CONTENT_TYPE);
+        return findFileAttributeOrNull(IS_FILE_CONTENT_TYPE::apply);
     }
 
     public Attribute getFilename() {
-        return findFileAttributeOrNull(IS_FILE_NAME);
+        return findFileAttributeOrNull(IS_FILE_NAME::apply);
     }
 
     public Attribute getFile() {
-        Attribute result = isBlob() ? this : findFileAttributeOrNull(IS_FILE_BINARY);
+        Attribute result = isBlob() ? this : findFileAttributeOrNull(IS_FILE_BINARY::apply);
         if (result == null) {
             // Note: in some case, when we have multiple binary, there could be only one filename (ex: an image and the thumbnail)
             // Here, the suffix does not match, let's return the first binary file we find. This way we 
@@ -679,12 +684,13 @@ public class Attribute extends AbstractNamer implements Named, Map<String, Objec
         return result;
     }
 
-    private Attribute findFileAttributeOrNull(Predicate<Attribute> predicate) {
-        try {
-            return find(getEntity().getAttributes().getList(), and(predicate, new AttributeShareSameSuffix(this)));
-        } catch (NoSuchElementException nse) {
-            return null; // can be interpreted as 'false' in velocity if statement
-        }
+    private Attribute findFileAttributeOrNull(java.util.function.Predicate<Attribute> predicate) {
+        var sameSuffix = new AttributeShareSameSuffix(this);
+        return getEntity().getAttributes().getList().stream()
+                .filter(predicate)
+                .filter(sameSuffix::apply)
+                .findFirst()
+                .orElse(null);
     }
 
     private Boolean isEmail;
@@ -714,13 +720,8 @@ public class Attribute extends AbstractNamer implements Named, Map<String, Objec
             return false;
         } else if (isSimpleFk()) {
             return true;
-        } else if (isInFk()) {
-            return false;
-        } else if (isVersion() || getEntity().getAuditEntityAttributes().contains(this)) {
-            return false;
-        } else {
-            return true;
         }
+        return !isInFk() && !isVersion() && !getEntity().getAuditEntityAttributes().contains(this);
     }
 
     public boolean isFormField() {
@@ -797,7 +798,7 @@ public class Attribute extends AbstractNamer implements Named, Map<String, Objec
     }
 
     @Override
-    final public String getPackageName() {
+    public final String getPackageName() {
         if (isEnum()) {
             return getEnumModel().getPackageName();
         } else {
@@ -810,99 +811,99 @@ public class Attribute extends AbstractNamer implements Named, Map<String, Objec
      *
      * @return
      */
-    final public boolean hasDigits() {
+    public final boolean hasDigits() {
         return isNumeric() && !isEnum() && !isVersion();
     }
 
-    final public boolean isNumeric() {
+    public final boolean isNumeric() {
         return getMappedType().isNumeric();
     }
 
-    final public boolean isLong() {
+    public final boolean isLong() {
         return getMappedType().isLong();
     }
 
-    final public boolean isInteger() {
+    public final boolean isInteger() {
         return getMappedType().isInteger();
     }
 
-    final public boolean isBigInteger() {
+    public final boolean isBigInteger() {
         return getMappedType().isBigInteger();
     }
 
-    final public boolean isDouble() {
+    public final boolean isDouble() {
         return getMappedType().isDouble();
     }
 
-    final public boolean isFloat() {
+    public final boolean isFloat() {
         return getMappedType().isFloat();
     }
 
-    final public boolean isBigDecimal() {
+    public final boolean isBigDecimal() {
         return getMappedType().isBigDecimal();
     }
 
-    final public boolean isString() {
+    public final boolean isString() {
         return getMappedType().isString();
     }
 
-    final public boolean isChar() {
+    public final boolean isChar() {
         return getMappedType().isChar();
     }
 
-    final public boolean isBoolean() {
+    public final boolean isBoolean() {
         return getMappedType().isBoolean();
     }
 
-    final public boolean isDate() {
+    public final boolean isDate() {
         return getMappedType().isDate();
     }
 
-    final public boolean isJavaUtilDate() {
+    public final boolean isJavaUtilDate() {
         return getMappedType().isJavaUtilDate();
     }
 
-    final public boolean isJavaUtilOnlyDate() {
+    public final boolean isJavaUtilOnlyDate() {
         return getMappedType().isJavaUtilDate() && getJdbcType() == JdbcType.DATE;
     }
 
-    final public boolean isJavaUtilDateAndTime() {
+    public final boolean isJavaUtilDateAndTime() {
         return getMappedType().isJavaUtilDate() && getJdbcType() == JdbcType.TIMESTAMP;
     }
 
-    final public boolean isJavaUtilOnlyTime() {
+    public final boolean isJavaUtilOnlyTime() {
         return getMappedType().isJavaUtilDate() && getJdbcType() == JdbcType.TIME;
     }
 
-    final public boolean isLocalDateOrTime() {
+    public final boolean isLocalDateOrTime() {
         return isLocalDate() || isLocalDateTime();
     }
 
-    final public boolean isLocalDate() {
+    public final boolean isLocalDate() {
         return getMappedType().isLocalDate();
     }
 
-    final public boolean isLocalDateTime() {
+    public final boolean isLocalDateTime() {
         return getMappedType().isLocalDateTime();
     }
 
-    final public boolean isZonedDateTime() { return  getMappedType().isZonedDateTime(); }
+    public final boolean isZonedDateTime() { return  getMappedType().isZonedDateTime(); }
 
-    final public boolean isInstant() { return  getMappedType().isInstant(); }
+    public final boolean isInstant() { return  getMappedType().isInstant(); }
 
-    final public boolean isLob() {
+    public final boolean isLob() {
         return getMappedType().isLob();
     }
 
-    final public boolean isBlob() {
+    public final boolean isBlob() {
         return getMappedType().isBlob();
     }
 
-    final public boolean isClob() {
+    public final boolean isClob() {
         return getMappedType().isClob();
     }
 
-    final public boolean isComparable() {
+    public final boolean isComparable() {
         return getMappedType().isComparable();
     }
 
@@ -914,7 +915,7 @@ public class Attribute extends AbstractNamer implements Named, Map<String, Objec
     /**
      * Whether this attribute is an integer, a long or a big integer.
      */
-    final public boolean isIntegralNumber() {
+    public final boolean isIntegralNumber() {
         return isInteger() || isLong() || isBigInteger();
     }
 
@@ -923,7 +924,7 @@ public class Attribute extends AbstractNamer implements Named, Map<String, Objec
      *
      * @return
      */
-    final public boolean isBinary() {
+    public final boolean isBinary() {
         return isLob() || isBlob() || isClob();
     }
 
@@ -1003,7 +1004,7 @@ public class Attribute extends AbstractNamer implements Named, Map<String, Objec
     // -----------------------------------------------
 
     @Override
-    final public boolean equals(Object o) {
+    public final boolean equals(Object o) {
         if (o == this) {
             return true;
         }
@@ -1017,7 +1018,7 @@ public class Attribute extends AbstractNamer implements Named, Map<String, Objec
     }
 
     @Override
-    final public int hashCode() {
+    public final int hashCode() {
         return getColumnFullName().hashCode();
     }
 
@@ -1085,9 +1086,7 @@ public class Attribute extends AbstractNamer implements Named, Map<String, Objec
     public Relation getXToOneRelation() {
         if (!xToOneRelationSet) {
             for (Relation r : getEntity().getXToOne().getList()) {
-                if (r.isIntermediate()) {
-                    continue;
-                } else if (r.getFromAttribute() == this) {
+                if (!r.isIntermediate() && r.getFromAttribute() == this) {
                     xToOneRelation = r;
                     xToOneRelationSet = true;
                     break;
@@ -1111,11 +1110,17 @@ public class Attribute extends AbstractNamer implements Named, Map<String, Objec
     }
 
     // derived
+    @SuppressWarnings("java:S4738") // Template packs use these Guava predicate types.
     public static Predicate<Attribute> IS_FILE_SIZE = and(NUMERIC, and(IS_FILE_SIZE_SUFFIX, HAS_FILE_ATTRIBUTES));
+    @SuppressWarnings("java:S4738") // Template packs use these Guava predicate types.
     public static Predicate<Attribute> IS_FILE_NAME = and(STRING, and(IS_FILE_NAME_SUFFIX, HAS_FILE_ATTRIBUTES));
+    @SuppressWarnings("java:S4738") // Template packs use these Guava predicate types.
     public static Predicate<Attribute> IS_FILE_BINARY = and(BLOB, and(IS_BINARY_SUFFIX, HAS_FILE_ATTRIBUTES));
+    @SuppressWarnings("java:S4738") // Template packs use these Guava predicate types.
     public static Predicate<Attribute> IS_FILE_CONTENT_TYPE = and(STRING, and(IS_CONTENT_TYPE_SUFFIX, HAS_FILE_ATTRIBUTES));
+    @SuppressWarnings("java:S4738") // Template packs use these Guava predicate types.
     public static Predicate<Attribute> IS_EMAIL = and(STRING, IS_EMAIL_SUFFIX);
+    @SuppressWarnings("java:S4738") // Template packs use these Guava predicate types.
     public static Predicate<Attribute> IS_PASSWORD = and(STRING, IS_PASSWORD_SUFFIX);
 
     // ------------------------------------
@@ -1123,7 +1128,7 @@ public class Attribute extends AbstractNamer implements Named, Map<String, Objec
     // from velocity templates as if we had getter.
     // ------------------------------------
 
-    private Map<String, Object> spis = newHashMap();
+    private final Map<String, Object> spis = newHashMap();
 
     @Override
     public void clear() {

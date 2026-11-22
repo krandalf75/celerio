@@ -21,7 +21,6 @@ import com.jaxio.celerio.configuration.database.Table;
 import com.jaxio.celerio.model.Attribute;
 import com.jaxio.celerio.model.Entity;
 import com.jaxio.celerio.model.PrimaryKey;
-import com.jaxio.celerio.model.Unique;
 import com.jaxio.celerio.model.primarykey.CompositePrimaryKey;
 import com.jaxio.celerio.model.primarykey.NoPrimaryKey;
 import com.jaxio.celerio.model.primarykey.SimplePrimaryKey;
@@ -33,6 +32,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
 import java.util.List;
+import java.util.Optional;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static com.jaxio.celerio.configuration.TrueFalse.TRUE;
@@ -41,8 +41,12 @@ import static com.jaxio.celerio.configuration.TrueFalse.TRUE;
 @Slf4j
 public class PrimaryKeyFactory {
 
+    private final Config config;
+
     @Autowired
-    private Config config;
+    public PrimaryKeyFactory(Config config) {
+        this.config = config;
+    }
 
     public void setupPrimaryKey(Entity entity) {
         PrimaryKey pk = null;
@@ -100,23 +104,14 @@ public class PrimaryKeyFactory {
     }
 
     private PrimaryKey findAppropriatePrimaryKey(Entity entity) {
-        Attribute attribute = findIdAttribute(entity);
-
-        if (attribute == null) {
-            attribute = firstNonNullableUniqueAttribute(entity);
-        }
-        if (attribute == null) {
-            attribute = firstUniqueAttribute(entity);
-        }
-        if (attribute == null) {
-            if (entity.getCompositeUniques().isNotEmpty()) {
-                return firstCompositeUniqueAsPrimaryKey(entity);
-            }
-        }
-        if (attribute == null) {
-            attribute = firstAttribute(entity);
+        Optional<Attribute> candidate = findIdAttribute(entity)
+                .or(() -> firstNonNullableUniqueAttribute(entity))
+                .or(() -> firstUniqueAttribute(entity));
+        if (candidate.isEmpty() && entity.getCompositeUniques().isNotEmpty()) {
+            return firstCompositeUniqueAsPrimaryKey(entity);
         }
 
+        Attribute attribute = candidate.orElseGet(() -> firstAttribute(entity));
         attribute.setSimplePk(true);
         if (config.getCelerio().getConfiguration().getConventions().getRenamePkToIdentifiableProperty() == TRUE) {
             overridePkFieldName(attribute);
@@ -129,33 +124,27 @@ public class PrimaryKeyFactory {
         return new CompositePrimaryKey(entity, unique.getAttributes());
     }
 
-    private Attribute findIdAttribute(Entity entity) {
-        for (Attribute a : entity.getAttributes().getList()) {
-            if (a.getColumnName().equalsIgnoreCase("id")) {
-                return a;
-            }
-        }
-        return null;
+    private Optional<Attribute> findIdAttribute(Entity entity) {
+        return entity.getAttributes().getList().stream()
+                .filter(attribute -> attribute.getColumnName().equalsIgnoreCase("id"))
+                .findFirst();
     }
 
-    private Attribute firstNonNullableUniqueAttribute(Entity entity) {
-        for (Unique unique : entity.getSimpleUniques().getList()) {
-            if (unique instanceof SimpleUnique && unique.isPotentialKey()) {
-                SimpleUnique simpleUnique = (SimpleUnique) unique;
-                return simpleUnique.getAttribute();
-            }
-        }
-        return null;
+    private Optional<Attribute> firstNonNullableUniqueAttribute(Entity entity) {
+        return entity.getSimpleUniques().getList().stream()
+                .filter(SimpleUnique.class::isInstance)
+                .map(SimpleUnique.class::cast)
+                .filter(SimpleUnique::isPotentialKey)
+                .map(SimpleUnique::getAttribute)
+                .findFirst();
     }
 
-    private Attribute firstUniqueAttribute(Entity entity) {
-        for (Unique unique : entity.getSimpleUniques().getList()) {
-            if (unique instanceof SimpleUnique) {
-                SimpleUnique simpleUnique = (SimpleUnique) unique;
-                return simpleUnique.getAttribute();
-            }
-        }
-        return null;
+    private Optional<Attribute> firstUniqueAttribute(Entity entity) {
+        return entity.getSimpleUniques().getList().stream()
+                .filter(SimpleUnique.class::isInstance)
+                .map(SimpleUnique.class::cast)
+                .map(SimpleUnique::getAttribute)
+                .findFirst();
     }
 
     private Attribute firstAttribute(Entity entity) {

@@ -18,7 +18,6 @@ package com.jaxio.celerio.model;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Sets;
 import com.jaxio.celerio.configuration.database.Table;
 import com.jaxio.celerio.convention.ClassType;
@@ -36,6 +35,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import static com.google.common.collect.Iterables.any;
 import static com.google.common.collect.Iterables.find;
@@ -56,14 +56,14 @@ public class Project implements Map<String, Object> {
     @Getter(value = AccessLevel.PRIVATE)
     private Map<String, Entity> currentEntitiesByName = newHashMap();
     private SimpleListHolder<Entity> entities = newEntityHolder();
-    private SimpleListHolder<Entity> rootEntities = newEntityHolder(ROOT);
-    private SimpleListHolder<Entity> entitiesWithFiles = newEntityHolder(HAS_FILE);
-    private SimpleListHolder<Entity> virtuals = newEntityHolder(VIRTUAL);
-    private SimpleListHolder<Entity> views = newEntityHolder(VIEW);
-    private SimpleListHolder<Entity> tables = newEntityHolder(TABLE);
-    private SimpleListHolder<Entity> withoutManyToManyJoinEntities = newEntityHolder(NOT_MANY_TO_MANY_JOIN);
-    private SimpleListHolder<Entity> search = newEntityHolder(SEARCH);
-    private Map<String, Object> spis = newHashMap();
+    private final SimpleListHolder<Entity> rootEntities = newEntityHolder(ROOT::apply);
+    private final SimpleListHolder<Entity> entitiesWithFiles = newEntityHolder(HAS_FILE::apply);
+    private final SimpleListHolder<Entity> virtuals = newEntityHolder(VIRTUAL::apply);
+    private final SimpleListHolder<Entity> views = newEntityHolder(VIEW::apply);
+    private final SimpleListHolder<Entity> tables = newEntityHolder(TABLE::apply);
+    private final SimpleListHolder<Entity> withoutManyToManyJoinEntities = newEntityHolder(NOT_MANY_TO_MANY_JOIN::apply);
+    private final SimpleListHolder<Entity> search = newEntityHolder(SEARCH::apply);
+    private final Map<String, Object> spis = newHashMap();
 
     public Project() {
     }
@@ -77,7 +77,7 @@ public class Project implements Map<String, Object> {
     }
 
     private SimpleListHolder<Entity> newEntityHolder(Predicate<Entity> predicate) {
-        return new SimpleListHolder<Entity>(currentEntities, predicate, "name");
+        return new SimpleListHolder<>(currentEntities, predicate::test, "name");
     }
 
     public void reset() {
@@ -203,7 +203,7 @@ public class Project implements Map<String, Object> {
         return ToStringBuilder.reflectionToString(this, ToStringStyle.MULTI_LINE_STYLE);
     }
 
-    // TODO: we should have a central place for enum types
+    /** Collects the distinct enum types used by entity attributes for code generation. */
     public Set<EnumType> getEnumTypes() {
         Set<EnumType> ret = Sets.newTreeSet();
         for (Entity entity : getEntities().getList()) {
@@ -217,13 +217,8 @@ public class Project implements Map<String, Object> {
     }
 
     public boolean isDefaultSchema() {
-        if (!hasTableNames("ADDRESS", "ACCOUNT", "ROLE", "ACCOUNT_ROLE", "DOCUMENT", "BOOK", "MORE_TYPES_DEMO", "LEGACY")) {
-            return false;
-        }
-        if (!hasHomeAddress()) {
-            return false;
-        }
-        return true;
+        return hasTableNames("ADDRESS", "ACCOUNT", "ROLE", "ACCOUNT_ROLE", "DOCUMENT", "BOOK", "MORE_TYPES_DEMO", "LEGACY")
+                && hasHomeAddress();
     }
 
     private boolean hasHomeAddress() {

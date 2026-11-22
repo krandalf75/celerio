@@ -30,7 +30,7 @@ public class OracleExtension implements Extension {
      */
     @Override
     public void apply(Connection connection, Metadata metadata) {
-
+        // Oracle metadata is handled by the standard JDBC extraction.
     }
 
     @Override

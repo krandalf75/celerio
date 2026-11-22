@@ -21,6 +21,9 @@ package com.jaxio.celerio.util;
  */
 public class StringUtil {
 
+    private StringUtil() {
+    }
+
     /**
      * Is the given string not empty ?
      *
@@ -28,7 +31,7 @@ public class StringUtil {
      * @return true if not empty, false otherwise
      */
     public static boolean hasLength(String s) {
-        return s != null && s.trim().length() > 0;
+        return s != null && !s.trim().isEmpty();
     }
 
     /**

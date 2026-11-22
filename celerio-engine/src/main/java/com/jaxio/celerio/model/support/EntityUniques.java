@@ -35,6 +35,7 @@ public class EntityUniques extends CurrentAndFlatListHolder<Unique, Entity> {
         super(entity, listGetter);
     }
 
+    @SuppressWarnings("java:S4738") // Template packs use these Guava predicate types.
     public EntityUniques(Entity entity, ListGetter<Unique, Entity> listGetter, Predicate<Unique> predicate) {
         super(entity, listGetter, predicate);
     }

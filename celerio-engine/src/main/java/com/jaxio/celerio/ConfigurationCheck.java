@@ -33,7 +33,6 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 import static com.google.common.collect.Lists.newArrayList;
-import static java.util.Collections.sort;
 import static javax.persistence.InheritanceType.JOINED;
 
 /**
@@ -42,6 +41,7 @@ import static javax.persistence.InheritanceType.JOINED;
 @Service
 @Slf4j
 public class ConfigurationCheck {
+    private static final String ENTITY_PREFIX = "Entity '";
 
     @SuppressWarnings("rawtypes")
     public Class[] classesToSkip = {java.util.HashMap.class};
@@ -51,7 +51,7 @@ public class ConfigurationCheck {
         checkConfigVsMetadataConsistency(errors, config);
         checkOrdinalEnums(errors, config);
         checkVersionOnJoinedInheritance(errors, config);
-        checkForeignKeyMapping(errors, config);
+        checkForeignKeyMapping(config);
         dumpErrors(errors);
         return errors.isEmpty();
     }
@@ -88,7 +88,7 @@ public class ConfigurationCheck {
     /**
      * Check that foreign keys have the same mapped type as the target.
      */
-    private void checkForeignKeyMapping(List<String> errors, Config config) {
+    private void checkForeignKeyMapping(Config config) {
         for (Entity entity : config.getProject().getEntities().getList()) {
             for (Relation relation : entity.getRelations().getList()) {
                 if (relation.isInverse() || relation.isIntermediate()) {
@@ -96,21 +96,27 @@ public class ConfigurationCheck {
                 }
 
                 for (AttributePair attributePair : relation.getAttributePairs()) {
-                    if (attributePair.getFromAttribute().getMappedType() != attributePair.getToAttribute().getMappedType()) {
-                        String errorMsg = "Inconsistent types: Column " + attributePair.getFromAttribute().getFullColumnName() + "["
-                                + attributePair.getFromAttribute().getJdbcType() + "] references column " + attributePair.getToAttribute().getFullColumnName()
-                                + "[" + attributePair.getToAttribute().getJdbcType() + "]. " + "You should really fix your SQL schema.";
-                        if (attributePair.getFromAttribute().isInCpk()) {
-                            // we may get compile failure as the property is mapped (inside the cpk)
-                            log.warn(errorMsg + ". To avoid this error you can force the mapped type using configuration.");
-                        } else {
-                            // we should not get compile failure as the property is not mapped.
-                            log.warn(errorMsg);
-                        }
-                    }
+                    checkForeignKeyTypes(attributePair);
                 }
             }
         }
+    }
+
+    private void checkForeignKeyTypes(AttributePair attributePair) {
+        Attribute from = attributePair.getFromAttribute();
+        Attribute to = attributePair.getToAttribute();
+        if (from.getMappedType() == to.getMappedType()) {
+            return;
+        }
+
+        String message = "Inconsistent types: Column " + from.getFullColumnName() + "[" + from.getJdbcType()
+                + "] references column " + to.getFullColumnName() + "[" + to.getJdbcType()
+                + "]. You should really fix your SQL schema.";
+        if (from.isInCpk()) {
+            // The mapped property can cause generated code to fail to compile.
+            message += " To avoid this error you can force the mapped type using configuration.";
+        }
+        log.warn(message);
     }
 
     /**
@@ -124,13 +130,17 @@ public class ConfigurationCheck {
         for (Entity entity : config.getProject().getRootEntities().getList()) {
             if (entity.hasInheritance() && entity.getInheritance().is(JOINED)) {
                 for (Entity child : entity.getAllChildrenRecursive()) {
-                    for (Attribute attribute : child.getAttributes().getList()) {
-                        if (attribute.isVersion()) {
-                            errors.add(attribute.getFullColumnName() + " is a version column, you should not have @Version in a child joined entity."
-                                    + " Use ignore=true in columnConfig or remove it from your table.");
-                        }
-                    }
+                    checkChildVersionColumns(errors, child);
                 }
+            }
+        }
+    }
+
+    private void checkChildVersionColumns(List<String> errors, Entity child) {
+        for (Attribute attribute : child.getAttributes().getList()) {
+            if (attribute.isVersion()) {
+                errors.add(attribute.getFullColumnName() + " is a version column, you should not have @Version in a child joined entity."
+                        + " Use ignore=true in columnConfig or remove it from your table.");
             }
         }
     }
@@ -138,7 +148,7 @@ public class ConfigurationCheck {
     private boolean checkTablePresence(String entityName, List<String> errors, Metadata metadata, String schemaName, String tableName) {
         Table table = metadata.getTableBySchemaAndName(schemaName, tableName);
         if (table == null) {
-            String errorMsg = "Entity '"
+            String errorMsg = ENTITY_PREFIX
                     + entityName
                     + "': The table '"
                     + tableName
@@ -157,7 +167,7 @@ public class ConfigurationCheck {
     private boolean checkColumnPresence(String entityName, List<String> errors, Metadata metadata, ColumnConfig cc) {
         Table table = metadata.getTableByName(cc.getTableName()); // the field may come from a different table (ie secondary table)
         if (table == null) {
-            String errorMsg = "Entity '"
+            String errorMsg = ENTITY_PREFIX
                     + entityName
                     + "."
                     + cc.getFieldName()
@@ -175,7 +185,7 @@ public class ConfigurationCheck {
 
         Column column = table.getColumnByName(cc.getColumnName());
         if (column == null) {
-            String errorMsg = "Entity '"
+            String errorMsg = ENTITY_PREFIX
                     + entityName
                     + "': The table.column '"
                     + cc.getTableName()
@@ -194,7 +204,7 @@ public class ConfigurationCheck {
     }
 
     private void dumpErrors(List<String> errors) {
-        sort(errors);
+        errors.sort(null);
         for (String error : errors) {
             log.error(error);
         }

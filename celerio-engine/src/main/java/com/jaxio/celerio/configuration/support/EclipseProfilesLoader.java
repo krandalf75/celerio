@@ -32,9 +32,12 @@ import java.util.List;
 @Service
 public class EclipseProfilesLoader extends AbstractJibxLoader<Profiles> {
 
+    private final Marshaller marshaller;
+
     @Autowired
-    @Qualifier("eclipseProfilesMarshaller")
-    private Marshaller marshaller;
+    public EclipseProfilesLoader(@Qualifier("eclipseProfilesMarshaller") Marshaller marshaller) {
+        this.marshaller = marshaller;
+    }
 
     public Marshaller getMarshaller() {
         return marshaller;
@@ -46,7 +49,7 @@ public class EclipseProfilesLoader extends AbstractJibxLoader<Profiles> {
 
     public List<Setting> loadSettingsFromEclipseFile(File eclipseFile) throws IOException {
         Profiles profiles = load(eclipseFile);
-        if (profiles.getProfiles().size() > 0) {
+        if (!profiles.getProfiles().isEmpty()) {
             return profiles.getProfiles().iterator().next().getSettings();
         }
 

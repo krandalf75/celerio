@@ -17,68 +17,75 @@
 package com.jaxio.celerio.maven.plugin.generate;
 
 import com.jaxio.celerio.maven.plugin.celerio.CelerioConfigurationExtractor;
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class CelerioConfigurationExtractorTest {
 
     @Test
     public void normalCelerioConfig() {
-        String xml = "\n" //
-                + "<configuration><celerio:celerio>\n" //
-                + "		<celerio:configuration>\n" //
-                + "			<celerio:conventions>\n" //
-                + "				<celerio:convention name=\"formService\">\n" //
-                + "				glouglou\n" //
-                + "				</celerio:convention>\n" //
-                + "			</celerio:conventions>\n" //
-                + "		</celerio:configuration>\n" //
-                + "	</celerio:celerio>\n" //
-                + "</configuration>";
+        String xml = """
+
+                <configuration><celerio:celerio>
+                \t\t<celerio:configuration>
+                \t\t\t<celerio:conventions>
+                \t\t\t\t<celerio:convention name="formService">
+                \t\t\t\tglouglou
+                \t\t\t\t</celerio:convention>
+                \t\t\t</celerio:conventions>
+                \t\t</celerio:configuration>
+                \t</celerio:celerio>
+                </configuration>\
+                """;
         CelerioConfigurationExtractor extractor = new CelerioConfigurationExtractor(xml);
-        String expected = "\n" //
-                + "		<configuration>\n" //
-                + "			<conventions>\n" //
-                + "				<convention name=\"formService\">\n" //
-                + "				glouglou\n" //
-                + "				</convention>\n" //
-                + "			</conventions>\n" //
-                + "		</configuration>\n" //
-                + "	";
+        String expected = """
+
+                \t\t<configuration>
+                \t\t\t<conventions>
+                \t\t\t\t<convention name="formService">
+                \t\t\t\tglouglou
+                \t\t\t\t</convention>
+                \t\t\t</conventions>
+                \t\t</configuration>
+                \t\
+                """;
         Assert.assertEquals(CelerioConfigurationExtractor.CELERIO_XML_START + expected + CelerioConfigurationExtractor.CELERIO_XML_END,
                 extractor.getCelerioConfig());
-        Assert.assertEquals(true, true);
     }
 
     @Test
     public void noCelerioConfig() {
         String xml = "\n<configuration><jdbcUser>me</jdbcUser></configuration>";
         CelerioConfigurationExtractor extractor = new CelerioConfigurationExtractor(xml);
-        Assert.assertEquals(null, extractor.getCelerioConfig());
+        Assert.assertNull(extractor.getCelerioConfig());
     }
 
     @Test
     public void mixedCelerioConfig() {
-        String xml = "\n" //
-                + "<configuration><jdbcUser>me</jdbcUser><celerio:celerio>\n" //
-                + "		<celerio:configuration>\n" //
-                + "			<celerio:conventions>\n" //
-                + "				<celerio:convention name=\"formService\">\n" //
-                + "				glouglou\n" //
-                + "				</celerio:convention>\n" //
-                + "			</celerio:conventions>\n" //
-                + "		</celerio:configuration>\n" //
-                + "	</celerio:celerio>" //
-                + "</configuration>";
+        String xml = """
+
+                <configuration><jdbcUser>me</jdbcUser><celerio:celerio>
+                \t\t<celerio:configuration>
+                \t\t\t<celerio:conventions>
+                \t\t\t\t<celerio:convention name="formService">
+                \t\t\t\tglouglou
+                \t\t\t\t</celerio:convention>
+                \t\t\t</celerio:conventions>
+                \t\t</celerio:configuration>
+                \t</celerio:celerio></configuration>\
+                """;
         CelerioConfigurationExtractor extractor = new CelerioConfigurationExtractor(xml);
-        String expected = "\n" //
-                + "		<configuration>\n" //
-                + "			<conventions>\n" //
-                + "				<convention name=\"formService\">\n" //
-                + "				glouglou\n" //
-                + "				</convention>\n" //
-                + "			</conventions>\n" //
-                + "		</configuration>\n	";
+        String expected = """
+
+                \t\t<configuration>
+                \t\t\t<conventions>
+                \t\t\t\t<convention name="formService">
+                \t\t\t\tglouglou
+                \t\t\t\t</convention>
+                \t\t\t</conventions>
+                \t\t</configuration>
+                \t\
+                """;
         Assert.assertEquals(CelerioConfigurationExtractor.CELERIO_XML_START + expected + CelerioConfigurationExtractor.CELERIO_XML_END,
                 extractor.getCelerioConfig());
     }

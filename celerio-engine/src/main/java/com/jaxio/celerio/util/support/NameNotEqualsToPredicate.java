@@ -20,7 +20,7 @@ import com.google.common.base.Predicate;
 import com.jaxio.celerio.util.Named;
 
 public class NameNotEqualsToPredicate<T extends Named> implements Predicate<T> {
-    private String other;
+    private final String other;
 
     public NameNotEqualsToPredicate(String otherName) {
         other = otherName;

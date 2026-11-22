@@ -50,7 +50,7 @@ public enum WellKnownFolder {
 
     private String folder;
     private String generatedFolder;
-    private boolean isResource;
+    private final boolean isResource;
 
     WellKnownFolder(String folder, boolean isResource) {
         setFolder(folder);
@@ -64,10 +64,12 @@ public enum WellKnownFolder {
         this.isResource = isResource;
     }
 
+    @SuppressWarnings("java:S3066") // WellKnownFolderOverride applies this setting from project configuration.
     public void setFolder(String folder) {
         this.folder = normalize(folder);
     }
 
+    @SuppressWarnings("java:S3066") // WellKnownFolderOverride applies this setting from project configuration.
     public void setGeneratedFolder(String generatedFolder) {
         this.generatedFolder = normalize(generatedFolder);
     }

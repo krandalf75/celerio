@@ -16,34 +16,37 @@
 
 package com.jaxio.celerio;
 
-import org.apache.commons.io.IOUtils;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.util.Properties;
 
 public class Brand {
-    private final String logoFilename = "logo.png";
+    private static final String LOGO_FILENAME = "logo.png";
+    private static final String MAINTENANCE_EMAIL = "support@jaxio.com";
+
     private final String logoPath;
     private final String brandingPath;
     private String companyName = "Jaxio";
     private String companyUrl = "http://www.jaxio.com/";
     private String footer = "";
     private String rootPackage = "com.jaxio";
-    private final String maintenanceEmail = "support@jaxio.com";
 
     public Brand() {
         brandingPath = System.getProperty("user.home") + "/.celerio/branding.properties";
-        logoPath = System.getProperty("user.home") + "/.celerio/" + logoFilename;
+        logoPath = System.getProperty("user.home") + "/.celerio/" + LOGO_FILENAME;
         try {
 
             Properties p = new Properties();
             File f = new File(brandingPath);
             if (f.exists()) {
-                p.load(new FileInputStream(f));
+                try (FileInputStream in = new FileInputStream(f)) {
+                    p.load(in);
+                }
                 companyName = p.getProperty("company_name", companyName);
                 companyUrl = p.getProperty("company_url", companyUrl);
                 footer = p.getProperty("footer", footer);
@@ -56,7 +59,9 @@ public class Brand {
                 if (!f.getParentFile().exists()) {
                     f.getParentFile().mkdirs();
                 }
-                p.store(new FileOutputStream(f), "CELERIO BRANDING");
+                try (FileOutputStream out = new FileOutputStream(f)) {
+                    p.store(out, "CELERIO BRANDING");
+                }
             }
 
             // copy logo if not present
@@ -64,7 +69,10 @@ public class Brand {
             if (!logo.exists()) {
                 PathMatchingResourcePatternResolver o = new PathMatchingResourcePatternResolver();
                 Resource defaultBrandLogo = o.getResource("classpath:/brand-logo.png");
-                new FileOutputStream(logo).write(IOUtils.toByteArray(defaultBrandLogo.getInputStream()));
+                try (InputStream in = defaultBrandLogo.getInputStream();
+                     FileOutputStream out = new FileOutputStream(logo)) {
+                    in.transferTo(out);
+                }
             }
 
         } catch (Exception e) {
@@ -85,7 +93,7 @@ public class Brand {
     }
 
     public String getMaintenanceEmail() {
-        return maintenanceEmail;
+        return MAINTENANCE_EMAIL;
     }
 
     public String getFooter() {
@@ -101,6 +109,6 @@ public class Brand {
     }
 
     public String getLogoFilename() {
-        return logoFilename;
+        return LOGO_FILENAME;
     }
 }

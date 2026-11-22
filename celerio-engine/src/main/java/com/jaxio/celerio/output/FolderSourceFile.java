@@ -22,19 +22,17 @@ import org.apache.commons.io.FileUtils;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Map;
 
 import static com.google.common.collect.Maps.newConcurrentMap;
 import static org.apache.commons.io.FilenameUtils.normalize;
-import static org.apache.commons.io.IOUtils.closeQuietly;
 import static org.apache.commons.io.IOUtils.contentEquals;
 import static org.apache.commons.lang.StringUtils.isBlank;
 
 @Slf4j
 public class FolderSourceFile implements SourceFile {
-    private Map<String, Boolean> fileExistCache = newConcurrentMap();
-    private String directory;
+    private final Map<String, Boolean> fileExistCache = newConcurrentMap();
+    private final String directory;
 
     public FolderSourceFile(String directory) {
         this.directory = normalize(directory);
@@ -78,16 +76,10 @@ public class FolderSourceFile implements SourceFile {
 
     @Override
     public boolean isSameContent(String pathToExistingContent, byte[] contentToCompare) throws IOException {
-        InputStream existingContent = null;
-        boolean sameContent = false;
-        try {
-            existingContent = new ByteArrayInputStream(getContent(pathToExistingContent));
-            sameContent = contentEquals(new ByteArrayInputStream(contentToCompare), existingContent);
-        } finally {
-            closeQuietly(existingContent);
+        try (ByteArrayInputStream existingContent = new ByteArrayInputStream(getContent(pathToExistingContent));
+             ByteArrayInputStream proposedContent = new ByteArrayInputStream(contentToCompare)) {
+            return contentEquals(proposedContent, existingContent);
         }
-
-        return sameContent;
     }
 
     private void createFolder(String folder) {
@@ -96,11 +88,11 @@ public class FolderSourceFile implements SourceFile {
             if (!dir.exists()) {
                 dir.mkdirs();
             }
-        } catch (Exception e) {
+        } catch (Exception _) {
             // ignore
         }
         if (!dir.isDirectory() || !dir.canWrite()) {
-            throw new RuntimeException("Cannot write to: " + folder);
+            throw new IllegalStateException("Cannot write to: " + folder);
         }
     }
 }

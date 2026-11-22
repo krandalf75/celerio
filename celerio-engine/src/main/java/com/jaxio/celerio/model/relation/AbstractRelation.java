@@ -23,11 +23,12 @@ import com.jaxio.celerio.configuration.entity.OrderByGetter;
 import com.jaxio.celerio.model.Attribute;
 import com.jaxio.celerio.model.AttributePair;
 import com.jaxio.celerio.model.Entity;
+import com.jaxio.celerio.model.Unique;
+import com.jaxio.celerio.model.PrimaryKey;
 import com.jaxio.celerio.model.Relation;
 import com.jaxio.celerio.util.Labels;
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.commons.lang.NotImplementedException;
 
 import java.util.*;
 
@@ -54,16 +55,16 @@ public abstract class AbstractRelation implements Relation, Map<String, Object> 
     }
 
     @Override
-    final public Relation createInverse() {
+    public final AbstractRelation createInverse() {
         if (isInverse()) {
             throw new IllegalStateException("You cannot create an inverse side from an inverse side");
         }
 
-        AbstractRelation inverse = buildInverse();
-        inverse.isInverse = true;
-        setInverse(inverse);
-        inverse.setInverse(this);
-        return inverse;
+        AbstractRelation inverseRelation = buildInverse();
+        inverseRelation.isInverse = true;
+        setInverse(inverseRelation);
+        inverseRelation.setInverse(this);
+        return inverseRelation;
     }
 
     @Override
@@ -81,8 +82,20 @@ public abstract class AbstractRelation implements Relation, Map<String, Object> 
         if (isSimple()) {
             return getFromAttribute().isUnique();
         }
-        // TODO : implement
-        throw new NotImplementedException("to be developped using entity uniques");
+        if (!isComposite()) {
+            return false;
+        }
+
+        List<Attribute> columns = getFromAttributes();
+        Entity entity = getFromEntity();
+        PrimaryKey primaryKey = entity.getPrimaryKey();
+        if (primaryKey != null && !primaryKey.getAttributes().isEmpty()
+                && columns.containsAll(primaryKey.getAttributes())) {
+            return true;
+        }
+        return entity.getCurrentUniques().stream()
+                .map(Unique::getAttributes)
+                .anyMatch(uniqueColumns -> !uniqueColumns.isEmpty() && columns.containsAll(uniqueColumns));
     }
 
     /**
@@ -95,17 +108,8 @@ public abstract class AbstractRelation implements Relation, Map<String, Object> 
             return (isManyToOne() || isOneToOne()) && getFromAttribute().isNotNullable();
         }
 
-        if (isComposite()) {
-            if (isManyToOne() || isOneToOne()) {
-                for (Attribute fa : getFromAttributes()) {
-                    if (fa.isNotNullable()) {
-                        return true; // if one of them is required, we assume the composite relation is required
-                    }
-                }
-            }
-        }
-
-        return false;
+        return isComposite() && (isManyToOne() || isOneToOne())
+                && getFromAttributes().stream().anyMatch(Attribute::isNotNullable);
     }
 
     @Override
@@ -177,7 +181,7 @@ public abstract class AbstractRelation implements Relation, Map<String, Object> 
     public String getOneLineComment() {
         if (isManyToOne() || (isOneToOne() && !isInverse())) {
             if (isSimple()) {
-                if (getFromAttribute().getOneLineComment().length() > 0) {
+                if (!getFromAttribute().getOneLineComment().isEmpty()) {
                     return getFromAttribute().getOneLineComment() + " (" + getFromAttribute().getVar() + ")";
                 } else {
                     return " // (" + getFromAttribute().getVar() + ")";
@@ -190,7 +194,7 @@ public abstract class AbstractRelation implements Relation, Map<String, Object> 
                     sb.append(fromAttribute.getVar()).append(", ");
                 }
                 sb.append(")");
-                return sb.toString().replaceAll(", \\)", ")");
+                return sb.toString().replace(", )", ")");
             }
         }
 
@@ -202,7 +206,7 @@ public abstract class AbstractRelation implements Relation, Map<String, Object> 
     }
 
     @Override
-    final public String getKind() {
+    public final String getKind() {
         if (isManyToOne()) {
             return "many-to-one";
         }
@@ -328,7 +332,7 @@ public abstract class AbstractRelation implements Relation, Map<String, Object> 
     // from velocity templates as if we had getter.
     // ------------------------------------
 
-    private Map<String, Object> spis = newHashMap();
+    private final Map<String, Object> spis = newHashMap();
 
     @Override
     public void clear() {

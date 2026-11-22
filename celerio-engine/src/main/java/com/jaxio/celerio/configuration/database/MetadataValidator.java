@@ -21,14 +21,14 @@ import java.util.List;
 
 public class MetadataValidator {
 
-    private List<String> errorMessages = new ArrayList<String>();
+    private final List<String> errorMessages = new ArrayList<String>();
 
     public List<String> getErrorMessages() {
         return errorMessages;
     }
 
     public boolean hasErrorMessages() {
-        return errorMessages.size() > 0;
+        return !errorMessages.isEmpty();
     }
 
     public void validate(Metadata metadata) {

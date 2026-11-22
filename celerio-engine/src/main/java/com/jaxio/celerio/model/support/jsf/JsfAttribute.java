@@ -43,7 +43,7 @@ public class JsfAttribute implements AttributeSpi {
     }
 
     private String getRequired() {
-        return !attribute.isRequired() ? "" : "required=\"true\" ";
+        return attribute.isRequired() ? "required=\"true\" " : "";
     }
 
     private String getMaxlength() {
@@ -117,6 +117,6 @@ public class JsfAttribute implements AttributeSpi {
             return "pattern=\"#{localDateTimeConverter.pattern}\"";
         }
 
-        return "pattern=\"yyyy-MM-dd\""; // TODO: do not hardcode it
+        return "pattern=\"yyyy-MM-dd\"";
     }
 }

@@ -21,49 +21,28 @@ import com.jaxio.celerio.model.Relation;
 
 import static com.google.common.base.Predicates.*;
 
+@SuppressWarnings("java:S4738") // Template packs use these Guava predicate types.
 public class RelationPredicates {
 
-    public static Predicate<Relation> COMPOSITE = new Predicate<Relation>() {
-        @Override
-        public boolean apply(Relation relation) {
-            return relation.isComposite();
-        }
-    };
-    // SIMPLE / COMPOSITE
-    public static Predicate<Relation> SIMPLE = new Predicate<Relation>() {
-        @Override
-        public boolean apply(Relation relation) {
-            return relation.isSimple();
-        }
-    };
+    private RelationPredicates() {
+    }
 
-    public static Predicate<Relation> RELATION_IS_INVERSE = new Predicate<Relation>() {
-        @Override
-        public boolean apply(Relation relation) {
-            return relation.isInverse();
-        }
-    };
+    public static Predicate<Relation> COMPOSITE = Relation::isComposite;
+    // SIMPLE / COMPOSITE
+    public static Predicate<Relation> SIMPLE = Relation::isSimple;
+
+    public static Predicate<Relation> RELATION_IS_INVERSE = Relation::isInverse;
 
     public static Predicate<Relation> COMPOSITE_RELATION = not(SIMPLE);
 
     // ------- MANY TO MANY
-    public static Predicate<Relation> MANY_TO_MANY = new Predicate<Relation>() {
-        @Override
-        public boolean apply(Relation relation) {
-            return relation.isManyToMany();
-        }
-    };
+    public static Predicate<Relation> MANY_TO_MANY = Relation::isManyToMany;
     public static Predicate<Relation> NOT_MANY_TO_MANY = not(MANY_TO_MANY);
     public static Predicate<Relation> SIMPLE_MANY_TO_MANY = and(SIMPLE, MANY_TO_MANY);
     public static Predicate<Relation> COMPOSITE_MANY_TO_MANY = and(COMPOSITE_RELATION, MANY_TO_MANY);
 
     // ------- ONE TO MANY
-    public static Predicate<Relation> ONE_TO_MANY = new Predicate<Relation>() {
-        @Override
-        public boolean apply(Relation relation) {
-            return relation.isOneToMany();
-        }
-    };
+    public static Predicate<Relation> ONE_TO_MANY = Relation::isOneToMany;
 
     public static Predicate<Relation> SIMPLE_ONE_TO_MANY = and(SIMPLE, ONE_TO_MANY);
     public static Predicate<Relation> COMPOSITE_ONE_TO_MANY = and(COMPOSITE_RELATION, ONE_TO_MANY);
@@ -71,56 +50,26 @@ public class RelationPredicates {
     public static Predicate<Relation> X_TO_MANY = or(ONE_TO_MANY, MANY_TO_MANY);
 
     // ------- ONE TO VIRTUAL ONE
-    public static Predicate<Relation> ONE_TO_VIRTUAL_ONE = new Predicate<Relation>() {
-        @Override
-        public boolean apply(Relation relation) {
-            return relation.isOneToVirtualOne();
-        }
-    };
+    public static Predicate<Relation> ONE_TO_VIRTUAL_ONE = Relation::isOneToVirtualOne;
 
     public static Predicate<Relation> SIMPLE_ONE_TO_VIRTUAL_ONE = and(SIMPLE, ONE_TO_VIRTUAL_ONE);
     public static Predicate<Relation> COMPOSITE_ONE_TO_VIRTUAL_ONE = and(COMPOSITE_RELATION, ONE_TO_VIRTUAL_ONE);
 
     // ------- ONE TO ONE
-    public static Predicate<Relation> ONE_TO_ONE = new Predicate<Relation>() {
-        @Override
-        public boolean apply(Relation relation) {
-            return relation.isOneToOne();
-        }
-    };
+    public static Predicate<Relation> ONE_TO_ONE = Relation::isOneToOne;
 
     public static Predicate<Relation> SIMPLE_ONE_TO_ONE = and(SIMPLE, ONE_TO_ONE);
     public static Predicate<Relation> SIMPLE_INVERSE_ONE_TO_ONE = and(SIMPLE, and(ONE_TO_ONE, RELATION_IS_INVERSE));
     public static Predicate<Relation> COMPOSITE_ONE_ONE = and(COMPOSITE_RELATION, ONE_TO_ONE);
 
     // ------- MANY TO ONE
-    public static Predicate<Relation> MANY_TO_ONE = new Predicate<Relation>() {
-        @Override
-        public boolean apply(Relation relation) {
-            return relation.isManyToOne();
-        }
-    };
+    public static Predicate<Relation> MANY_TO_ONE = Relation::isManyToOne;
 
-    public static Predicate<Relation> UNIDIRECTIONAL = new Predicate<Relation>() {
-        @Override
-        public boolean apply(Relation relation) {
-            return !relation.hasInverse();
-        }
-    };
+    public static Predicate<Relation> UNIDIRECTIONAL = relation -> !relation.hasInverse();
 
-    public static Predicate<Relation> BIDIRECTIONAL = new Predicate<Relation>() {
-        @Override
-        public boolean apply(Relation relation) {
-            return relation.hasInverse();
-        }
-    };
+    public static Predicate<Relation> BIDIRECTIONAL = Relation::hasInverse;
 
-    public static Predicate<Relation> INTERMEDIATE = new Predicate<Relation>() {
-        @Override
-        public boolean apply(Relation relation) {
-            return relation.isIntermediate();
-        }
-    };
+    public static Predicate<Relation> INTERMEDIATE = Relation::isIntermediate;
 
     public static Predicate<Relation> X_TO_ONE = or(ONE_TO_ONE, MANY_TO_ONE);
     public static Predicate<Relation> FORWARD_X_TO_ONE = and(X_TO_ONE, not(RELATION_IS_INVERSE));

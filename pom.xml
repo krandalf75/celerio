@@ -20,7 +20,7 @@
     <groupId>com.jaxio.celerio</groupId>
     <artifactId>celerio-parent</artifactId>
     <packaging>pom</packaging>
-    <version>6.0.24</version>
+    <version>6.0.25</version>
 
     <url>https://github.com/jaxio/celerio</url>
     <description>Celerio is a code generator tool for data-driven application.</description>
@@ -94,30 +94,7 @@
     <build>
         <defaultGoal>install</defaultGoal>
         <plugins>
-            <!-- http://www.mojohaus.org/license-maven-plugin/ -->
-            <!-- mvn -Dlicense.excludedScopes=test install -->
-            <!--
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>license-maven-plugin</artifactId>
-                <version>1.8</version>
-                <executions>
-                    <execution>
-                        <id>download-licenses</id>
-                        <goals>
-                            <goal>download-licenses</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>add-third-party</id>
-                        <goals>
-                            <goal>add-third-party</goal>
-                            <goal>aggregate-add-third-party</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            -->
+            <!-- Optional license reporting can use the download-licenses and add-third-party goals of the MojoHaus license plugin. -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>

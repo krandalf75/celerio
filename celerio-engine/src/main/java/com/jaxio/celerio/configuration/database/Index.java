@@ -52,12 +52,9 @@ public class Index {
         return nonUnique;
     }
 
-    public static Predicate<Index> NON_UNIQUE = new Predicate<Index>() {
-        @Override
-        public boolean apply(Index input) {
-            return input.isNonUnique();
-        }
-    };
+    @SuppressWarnings("java:S4738") // Template packs use these Guava predicate types.
+    public static Predicate<Index> NON_UNIQUE = Index::isNonUnique;
 
+    @SuppressWarnings("java:S4738") // Template packs use these Guava predicate types.
     public static Predicate<Index> UNIQUE = Predicates.not(NON_UNIQUE);
 }

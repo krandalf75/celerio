@@ -28,7 +28,6 @@ import com.jaxio.celerio.output.OutputResultFactory;
 import com.jaxio.celerio.template.pack.ClasspathTemplatePackInfoLoader;
 import com.jaxio.celerio.template.pack.TemplatePackInfo;
 import com.jaxio.celerio.util.XsdHelper;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -41,14 +40,15 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 import java.io.*;
-import java.util.Calendar;
-import java.util.Collections;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.time.Year;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static com.jaxio.celerio.util.PackageUtil.isPackageNameValid;
-import static org.apache.commons.io.FileUtils.writeStringToFile;
 import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.apache.commons.lang.StringUtils.substringAfter;
 
@@ -63,6 +63,7 @@ import static org.apache.commons.lang.StringUtils.substringAfter;
  */
 @Mojo(name = "bootstrap", defaultPhase = LifecyclePhase.INITIALIZE, requiresProject = false)
 public class BootstrapMojo extends AbstractMojo {
+    private static final String GENERATOR_CONFIG_DIRECTORY = "src/main/config/celerio-maven-plugin";
 
     /**
      * Whether the bootstrap ask interactively for appName, rootPackage etc.?
@@ -84,7 +85,7 @@ public class BootstrapMojo extends AbstractMojo {
 
 
     private List<TemplatePackInfo> bootstrapPacksInfo;
-    private Brand brand = new Brand();
+    private final Brand brand = new Brand();
     private String rootPackage;
     private String appName;
     private String bootstrapPackName;
@@ -95,30 +96,30 @@ public class BootstrapMojo extends AbstractMojo {
     // ------------------------------------
     // cmd line params
     // ------------------------------------
-    private String paramCelerioPack = "celerioPack";
+    private static final String PARAM_CELERIO_PACK = "celerioPack";
 
-    private String paramAppName = "appName";
-    private String paramAppRootPackage = "appRootPackage";
+    private static final String PARAM_APP_NAME = "appName";
+    private static final String PARAM_APP_ROOT_PACKAGE = "appRootPackage";
 
     // driver
-    private final String paramJdbcGroupId = "jdbcGroupId";
-    private final String paramJdbcArtifactId = "jdbcArtifactId";
-    private final String paramJdbcVersion = "jdbcVersion";
-    private final String paramJdbcDriver = "jdbcDriver";
+    private static final String PARAM_JDBC_GROUP_ID = "jdbcGroupId";
+    private static final String PARAM_JDBC_ARTIFACT_ID = "jdbcArtifactId";
+    private static final String PARAM_JDBC_VERSION = "jdbcVersion";
+    private static final String PARAM_JDBC_DRIVER = "jdbcDriver";
 
     // access
-    private final String paramHibernateDialect = "hibernateDialect";
-    private final String paramJdbcUser = "jdbcUser";
-    private final String paramJdbcPassword = "jdbcPassword";
-    private final String paramJdbcUrl = "jdbcPassword";
-    private final String paramJdbcCatalog = "jdbcCatalog";
-    private final String paramJdbcSchema = "jdbcSchema";
+    private static final String PARAM_HIBERNATE_DIALECT = "hibernateDialect";
+    private static final String PARAM_JDBC_USER = "jdbcUser";
+    private static final String PARAM_JDBC_PASSWORD = "jdbcPassword";
+    private static final String PARAM_JDBC_URL = "jdbcUrl";
+    private static final String PARAM_JDBC_CATALOG = "jdbcCatalog";
+    private static final String PARAM_JDBC_SCHEMA = "jdbcSchema";
 
-    private final String[] params = new String[]{
-            paramCelerioPack, paramAppName, paramAppRootPackage,
-            paramJdbcGroupId, paramJdbcArtifactId, paramJdbcVersion, paramJdbcDriver,
-            paramHibernateDialect, paramJdbcUser, paramJdbcPassword,
-            paramJdbcUrl, paramJdbcCatalog, paramJdbcSchema};
+    private static final List<String> PARAMS = List.of(
+            PARAM_CELERIO_PACK, PARAM_APP_NAME, PARAM_APP_ROOT_PACKAGE,
+            PARAM_JDBC_GROUP_ID, PARAM_JDBC_ARTIFACT_ID, PARAM_JDBC_VERSION, PARAM_JDBC_DRIVER,
+            PARAM_HIBERNATE_DIALECT, PARAM_JDBC_USER, PARAM_JDBC_PASSWORD,
+            PARAM_JDBC_URL, PARAM_JDBC_CATALOG, PARAM_JDBC_SCHEMA);
 
 
     // ------------------------------
@@ -199,7 +200,7 @@ public class BootstrapMojo extends AbstractMojo {
 
     private boolean useCommandLineParameters() {
         // light check
-        return checkParamPresence(paramAppName) && checkParamPresence(paramJdbcDriver) && checkParamPresence(paramJdbcUser);
+        return checkParamPresence(PARAM_APP_NAME) && checkParamPresence(PARAM_JDBC_DRIVER) && checkParamPresence(PARAM_JDBC_USER);
     }
 
     private boolean checkParamPresence(String paramName) {
@@ -209,28 +210,28 @@ public class BootstrapMojo extends AbstractMojo {
 
     private JdbcConnectivity setUpParamValuesAndReturnJdbcConnectivity() {
 
-        HashMap<String, String> map = new HashMap();
-        for (String param : params) {
+        HashMap<String, String> map = new HashMap<>();
+        for (String param : PARAMS) {
             map.put(param, System.getProperty(param));
         }
 
-        rootPackage = map.get(paramAppRootPackage);
-        appName = map.get(paramAppName);
-        bootstrapPackName = map.get(paramCelerioPack);
+        rootPackage = map.get(PARAM_APP_ROOT_PACKAGE);
+        appName = map.get(PARAM_APP_NAME);
+        bootstrapPackName = map.get(PARAM_CELERIO_PACK);
         sqlConfName = "empty";
 
         JdbcConnectivity jdbc = new JdbcConnectivity();
-        jdbc.setDriver(map.get(paramJdbcDriver));
-        jdbc.setDriverGroupId(map.get(paramJdbcGroupId));
-        jdbc.setDriverArtifactId(map.get(paramJdbcArtifactId));
-        jdbc.setDriverArtifactIdVersion(map.get(paramJdbcVersion));
+        jdbc.setDriver(map.get(PARAM_JDBC_DRIVER));
+        jdbc.setDriverGroupId(map.get(PARAM_JDBC_GROUP_ID));
+        jdbc.setDriverArtifactId(map.get(PARAM_JDBC_ARTIFACT_ID));
+        jdbc.setDriverArtifactIdVersion(map.get(PARAM_JDBC_VERSION));
 
-        jdbc.setHibernateDialect(map.get(paramHibernateDialect));
-        jdbc.setUser(map.get(paramJdbcUser));
-        jdbc.setPassword(map.get(paramJdbcPassword));
-        jdbc.setSchemaName(map.get(paramJdbcSchema));
-        jdbc.setCatalog(map.get(paramJdbcCatalog));
-        jdbc.setUrl(map.get(paramJdbcUrl));
+        jdbc.setHibernateDialect(map.get(PARAM_HIBERNATE_DIALECT));
+        jdbc.setUser(map.get(PARAM_JDBC_USER));
+        jdbc.setPassword(map.get(PARAM_JDBC_PASSWORD));
+        jdbc.setSchemaName(map.get(PARAM_JDBC_SCHEMA));
+        jdbc.setCatalog(map.get(PARAM_JDBC_CATALOG));
+        jdbc.setUrl(map.get(PARAM_JDBC_URL));
 
         if (jdbc.getDriver().toLowerCase().contains("oracle") || jdbc.getDriver().toLowerCase().contains("derby")) {
             jdbc.setSqlDelimiter("/");
@@ -244,18 +245,40 @@ public class BootstrapMojo extends AbstractMojo {
     /**
      * Ask the user all the info we need.
      */
+    @SuppressWarnings("java:S8450") // A single reader shares all buffered input across wizard steps.
     private void startInteractiveConfWizard() throws IOException {
-        BufferedReader br = null;
-        try {
-            br = new BufferedReader(new InputStreamReader(System.in));
-            System.out.println("");
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(System.in))) {
+            printConsoleLine("");
             chooseBootstrapPack(br);
             chooseSampleSqlAndConf(br);
             enterAppName(br);
             enterPackageName(br);
-        } finally {
-            br.close();
         }
+    }
+
+    private String readWizardInput(BufferedReader reader) throws IOException {
+        String input = reader.readLine();
+        if (input == null) {
+            throw new EOFException("Celerio bootstrap setup ended before all selections were entered");
+        }
+        return input;
+    }
+
+    private int readMenuIndex(BufferedReader reader, int optionCount) throws IOException {
+        String choice = readWizardInput(reader);
+        if (isBlank(choice)) {
+            return -1;
+        }
+        try {
+            int index = Integer.parseInt(choice) - 1;
+            if (index >= 0 && index < optionCount) {
+                return index;
+            }
+        } catch (NumberFormatException _) {
+            // The wizard displays the choices again after invalid input.
+        }
+        printConsoleLine("");
+        return -1;
     }
 
     // ----------------------------------------
@@ -273,36 +296,30 @@ public class BootstrapMojo extends AbstractMojo {
      * Interactively ask the user which pack should be used.
      */
     private void chooseBootstrapPack(BufferedReader br) throws IOException {
+        List<TemplatePackInfo> options = getBootstrapPacksInfo();
         while (true) {
             printInstruction("Choose the type of application you want to generate:");
-            for (int i = 0; i < getBootstrapPacksInfo().size(); i++) {
-                TemplatePackInfo templatePackInfo = getBootstrapPacksInfo().get(i);
-                System.out.println(" " + (i + 1) + ") " + templatePackInfo.getName());
-                System.out.println("    " + templatePackInfo.getProjectLink());
-                System.out.println("    " + templatePackInfo.getDescription());
+            for (int i = 0; i < options.size(); i++) {
+                TemplatePackInfo templatePackInfo = options.get(i);
+                printConsoleLine(" " + (i + 1) + ") " + templatePackInfo.getName());
+                printConsoleLine("    " + templatePackInfo.getProjectLink());
+                printConsoleLine("    " + templatePackInfo.getDescription());
 
                 if (templatePackInfo.getDescription2() != null) {
-                    System.out.println("    " + templatePackInfo.getDescription2());
+                    printConsoleLine("    " + templatePackInfo.getDescription2());
                 }
-                System.out.println("");
+                printConsoleLine("");
             }
 
-            String choice = br.readLine();
-            if (isBlank(choice)) {
-                continue;
-            } else {
-                try {
-                    TemplatePackInfo chosenTemplatePackInfo = getBootstrapPacksInfo().get(Integer.parseInt(choice) - 1);
-                    bootstrapPackName = chosenTemplatePackInfo.getName();
-                    System.out.println("OK, using: " + chosenTemplatePackInfo.getName());
-                    packCommand = chosenTemplatePackInfo.getCommand();
-                    packCommandHelp = chosenTemplatePackInfo.getCommandHelp();
-                } catch (Exception e) {
-                    System.out.println("");
-                    continue;
-                }
+            int index = readMenuIndex(br, options.size());
+            if (index >= 0) {
+                TemplatePackInfo chosen = options.get(index);
+                bootstrapPackName = chosen.getName();
+                printConsoleLine("OK, using: " + bootstrapPackName);
+                packCommand = chosen.getCommand();
+                packCommandHelp = chosen.getCommandHelp();
+                return;
             }
-            break;
         }
     }
 
@@ -334,30 +351,24 @@ public class BootstrapMojo extends AbstractMojo {
      * Interactively ask the user which sql conf should be used.
      */
     private void chooseSampleSqlAndConf(BufferedReader br) throws IOException {
+        List<SqlConfInfo> options = getSqlConfInfos();
         while (true) {
             printInstruction("Which sample SQL schema would you like to use?");
-            for (int i = 0; i < getSqlConfInfos().size(); i++) {
-                System.out.println(" " + (i + 1) + ") " + getSqlConfInfos().get(i).getName());
-                System.out.println("    " + getSqlConfInfos().get(i).getDescription());
-                if (getSqlConfInfos().get(i).getDescription2() != null) {
-                    System.out.println("    " + getSqlConfInfos().get(i).getDescription2());
+            for (int i = 0; i < options.size(); i++) {
+                printConsoleLine(" " + (i + 1) + ") " + options.get(i).getName());
+                printConsoleLine("    " + options.get(i).getDescription());
+                if (options.get(i).getDescription2() != null) {
+                    printConsoleLine("    " + options.get(i).getDescription2());
                 }
-                System.out.println("");
+                printConsoleLine("");
             }
 
-            String choice = br.readLine();
-            if (isBlank(choice)) {
-                continue;
-            } else {
-                try {
-                    sqlConfName = getSqlConfInfos().get(Integer.parseInt(choice) - 1).getName();
-                    System.out.println("OK, using: " + sqlConfName);
-                } catch (Exception e) {
-                    System.out.println("");
-                    continue;
-                }
+            int index = readMenuIndex(br, options.size());
+            if (index >= 0) {
+                sqlConfName = options.get(index).getName();
+                printConsoleLine("OK, using: " + sqlConfName);
+                return;
             }
-            break;
         }
     }
 
@@ -369,12 +380,12 @@ public class BootstrapMojo extends AbstractMojo {
         PathMatchingResourcePatternResolver o = new PathMatchingResourcePatternResolver();
 
         try {
-            Resource packInfosAsResource[] = o.getResources("classpath*:sqlconf/*/00-info.txt");
+            Resource[] packInfosAsResource = o.getResources("classpath*:sqlconf/*/00-info.txt");
             for (Resource r : packInfosAsResource) {
                 packInfos.add(new SqlConfInfo(r));
             }
 
-            Collections.sort(packInfos);
+            packInfos.sort(null);
             return packInfos;
         } catch (IOException ioe) {
             throw new RuntimeException("Error while searching for SQL CONF having a sqlconf/*/00-info.txt file!", ioe);
@@ -393,25 +404,28 @@ public class BootstrapMojo extends AbstractMojo {
         copySingleSqlFile(o, sqlDir, "03-import.sql");
 
         // copy conf.
-        Resource xmlResource[] = o.getResources("classpath*:sqlconf/" + sqlConfName + "/celerio-maven-plugin.xml");
-        StringWriter xmlWriter = new StringWriter();
-        IOUtils.copy(xmlResource[0].getInputStream(), xmlWriter, "UTF-8");
-        String xmlConf = xmlWriter.toString();
+        Resource[] xmlResources = o.getResources("classpath*:sqlconf/" + sqlConfName + "/celerio-maven-plugin.xml");
+        String xmlConf;
+        try (InputStream in = xmlResources[0].getInputStream()) {
+            xmlConf = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        }
         xmlConf = xmlConf.replace("${groupId}", rootPackage); // same as for archetype
         xmlConf = xmlConf.replace("${artifactId}", appName); // same as for archetype
-        File xmlDir = new File(appName + "/src/main/config/celerio-maven-plugin");
+        File xmlDir = new File(appName, GENERATOR_CONFIG_DIRECTORY);
         xmlDir.mkdirs();
         File xmlFile = new File(xmlDir, "celerio-maven-plugin.xml");
         getLog().info("Copy configuration file from '" + sqlConfName + "' resources: " + xmlFile.getName());
-        writeStringToFile(xmlFile, xmlConf, "UTF-8");
+        Files.writeString(xmlFile.toPath(), xmlConf);
     }
 
     private void copySingleSqlFile(PathMatchingResourcePatternResolver o, File sqlDir, String filename) throws IOException {
-        Resource sqlResource[] = o.getResources("classpath*:sqlconf/" + sqlConfName + "/" + filename);
+        Resource[] sqlResources = o.getResources("classpath*:sqlconf/" + sqlConfName + "/" + filename);
         File sqlFile = new File(sqlDir, filename);
         getLog().info("Copy SQL file from '" + sqlConfName + "' resources: " + sqlFile.getName());
-        IOUtils.copy(sqlResource[0].getInputStream(), new FileOutputStream(sqlFile));
-
+        try (InputStream in = sqlResources[0].getInputStream();
+             OutputStream out = new FileOutputStream(sqlFile)) {
+            in.transferTo(out);
+        }
     }
 
     // ----------------------------------------
@@ -419,14 +433,14 @@ public class BootstrapMojo extends AbstractMojo {
     // ----------------------------------------
 
     private void copyCelerioXsd() throws IOException {
-        File xsdDir = new File(appName + "/src/main/config/celerio-maven-plugin");
+        File xsdDir = new File(appName, GENERATOR_CONFIG_DIRECTORY);
         xsdDir.mkdirs();
         File celerioXsdFile = new File(xsdDir, "celerio.xsd");
         File nonamespaceXsdFile = new File(xsdDir, "nonamespace.xsd");
 
-        getLog().info("Copy Celerio configuration xsd files to " + appName + "/src/main/config/celerio-maven-plugin");
-        writeStringToFile(celerioXsdFile, XsdHelper.getCelerioXsdAsString(), "UTF-8");
-        writeStringToFile(nonamespaceXsdFile, XsdHelper.getNonamespaceXsdAsString(), "UTF-8");
+        getLog().info("Copy Celerio configuration xsd files to " + xsdDir);
+        Files.writeString(celerioXsdFile.toPath(), XsdHelper.getCelerioXsdAsString());
+        Files.writeString(nonamespaceXsdFile.toPath(), XsdHelper.getNonamespaceXsdAsString());
     }
 
     /**
@@ -437,20 +451,17 @@ public class BootstrapMojo extends AbstractMojo {
         while (true) {
             printInstruction("Enter the Java root package of your application: [" + suggestedRootPackage + "]");
 
-            String packageNameCandidate = br.readLine();
+            String packageNameCandidate = readWizardInput(br);
             if (isBlank(packageNameCandidate)) {
                 rootPackage = suggestedRootPackage;
-                break;
-            } else {
-                if (isPackageNameValid(packageNameCandidate)) {
-                    rootPackage = packageNameCandidate;
-                    break;
-                } else {
-                    System.out.println("Oops! invalid Java package name.");
-                    System.out.println("");
-                    continue;
-                }
+                return;
             }
+            if (isPackageNameValid(packageNameCandidate)) {
+                rootPackage = packageNameCandidate;
+                return;
+            }
+            printConsoleLine("Oops! invalid Java package name.");
+            printConsoleLine("");
         }
     }
 
@@ -461,20 +472,17 @@ public class BootstrapMojo extends AbstractMojo {
         while (true) {
             printInstruction("Enter your application name: [" + getDefaultAppName() + "]");
 
-            String appNameCandidate = br.readLine();
+            String appNameCandidate = readWizardInput(br);
             if (isBlank(appNameCandidate)) {
                 appName = getDefaultAppName();
-                break;
-            } else {
-                if (isPackageNameValid(getDefaultRootPackage() + "." + appNameCandidate)) {
-                    appName = appNameCandidate;
-                    break;
-                } else {
-                    System.out.println("Oops! invalid application name. Keep it simple, no '-', etc...");
-                    System.out.println("");
-                    continue;
-                }
+                return;
             }
+            if (isPackageNameValid(getDefaultRootPackage() + "." + appNameCandidate)) {
+                appName = appNameCandidate;
+                return;
+            }
+            printConsoleLine("Oops! invalid application name. Keep it simple, no '-', etc...");
+            printConsoleLine("");
         }
     }
 
@@ -523,7 +531,7 @@ public class BootstrapMojo extends AbstractMojo {
     private void celerioWelcomeBanner() {
         // http://ascii.mastervb.net/
         // font : varsity.ftl
-        int currentYear = Calendar.getInstance().get(Calendar.YEAR);
+        int currentYear = Year.now(ZoneId.systemDefault()).getValue();
         getLog().info("");
         getLog().info("        ______         __                  _          ");
         getLog().info("      .' ___  |       [  |                (_)         ");
@@ -542,19 +550,19 @@ public class BootstrapMojo extends AbstractMojo {
         getLog().info("");
         getLog().info("============================================");
         getLog().info("");
-        System.out.println("");
-        System.out.println("FINAL STEPS:");
-        System.out.println("");
-        System.out.println("1/ Optional: you can edit the generated pom.xml file to use your own database");
-        System.out.println("");
-        System.out.println("2/ Execute the following commands:");
-        System.out.println("");
-        System.out.println("cd " + appName);
-        System.out.println("" + packCommand);
-        System.out.println("");
+        printConsoleLine("");
+        printConsoleLine("FINAL STEPS:");
+        printConsoleLine("");
+        printConsoleLine("1/ Optional: you can edit the generated pom.xml file to use your own database");
+        printConsoleLine("");
+        printConsoleLine("2/ Execute the following commands:");
+        printConsoleLine("");
+        printConsoleLine("cd " + appName);
+        printConsoleLine("" + packCommand);
+        printConsoleLine("");
         if (packCommandHelp != null && !packCommandHelp.isEmpty()) {
-            System.out.println("3/ " + packCommandHelp);
-            System.out.println("");
+            printConsoleLine("3/ " + packCommandHelp);
+            printConsoleLine("");
         }
         getLog().info("");
         getLog().info("============================================");
@@ -564,8 +572,13 @@ public class BootstrapMojo extends AbstractMojo {
      * Print the passed instruction in the console.
      */
     private void printInstruction(String instruction) {
-        System.out.println(StringUtils.repeat("-", instruction.length()));
-        System.out.println(instruction);
-        System.out.println(StringUtils.repeat("-", instruction.length()));
+        printConsoleLine(StringUtils.repeat("-", instruction.length()));
+        printConsoleLine(instruction);
+        printConsoleLine(StringUtils.repeat("-", instruction.length()));
     }
+    @SuppressWarnings("java:S106") // Bootstrap prompts and choices are part of the interactive console interface.
+    private void printConsoleLine(String line) {
+        System.out.println(line);
+    }
+
 }

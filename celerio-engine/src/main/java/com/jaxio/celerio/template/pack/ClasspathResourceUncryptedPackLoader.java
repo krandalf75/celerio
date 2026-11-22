@@ -32,20 +32,24 @@ import static com.jaxio.celerio.configuration.Util.CLASSPATH_CELERIO_PACK;
 @Service
 public class ClasspathResourceUncryptedPackLoader {
 
+    private final CelerioPackConfigLoader celerioPackConfigLoader;
+
     @Autowired
-    private CelerioPackConfigLoader celerioPackConfigLoader;
+    public ClasspathResourceUncryptedPackLoader(CelerioPackConfigLoader celerioPackConfigLoader) {
+        this.celerioPackConfigLoader = celerioPackConfigLoader;
+    }
 
 
     public List<TemplatePack> getPacks() {
         List<TemplatePack> packs = newArrayList();
         try {
             PathMatchingResourcePatternResolver o = new PathMatchingResourcePatternResolver();
-            Resource infos[] = o.getResources(CLASSPATH_CELERIO_PACK);
+            Resource[] infos = o.getResources(CLASSPATH_CELERIO_PACK);
 
             for (Resource info : infos) {
                 CelerioPack celerioPack = celerioPackConfigLoader.load(info.getInputStream());
                 TemplatePackInfo templatePackInfo = new TemplatePackInfo(celerioPack);
-                Resource templatesAsResources[] = o.getResources("classpath*:/celerio/" + templatePackInfo.getName() + "/**/*");
+                Resource[] templatesAsResources = o.getResources("classpath*:/celerio/" + templatePackInfo.getName() + "/**/*");
                 packs.add(new ClasspathResourceUncryptedPack(templatePackInfo, templatesAsResources));
             }
 

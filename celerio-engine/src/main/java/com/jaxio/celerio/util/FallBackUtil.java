@@ -17,6 +17,11 @@
 package com.jaxio.celerio.util;
 
 public class FallBackUtil {
+
+    private FallBackUtil() {
+    }
+
+    @SafeVarargs
     public static <T> T fallBack(T... values) {
         for (T value : values) {
             if (value != null) {

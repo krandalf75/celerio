@@ -19,14 +19,13 @@ package com.jaxio.celerio.output;
 import com.jaxio.celerio.Config;
 import org.junit.Test;
 
-import java.io.IOException;
 
 import static org.fest.assertions.Assertions.assertThat;
 
 public class XmlFormatterTest {
 
     @Test
-    public void format() throws IOException {
+    public void format() {
         Config config = new Config();
         config.getCelerio().getConfiguration().getConventions().getXmlFormatter().setEnableXmlFormatter(true);
         XmlCodeFormatter xcf = new XmlCodeFormatter(config);
@@ -40,5 +39,18 @@ public class XmlFormatterTest {
         expectedXml += "</toto>" + eol; //
 
         assertThat(xcf.format(unformattedXml)).isEqualTo(expectedXml);
+    }
+
+    @Test
+    public void formatsDocumentsWithAnExternalDoctype() {
+        Config config = new Config();
+        config.getCelerio().getConfiguration().getConventions().getXmlFormatter().setEnableXmlFormatter(true);
+        XmlCodeFormatter formatter = new XmlCodeFormatter(config);
+        String doctype = "<!DOCTYPE project SYSTEM \"unavailable.dtd\">";
+
+        String formatted = formatter.format(doctype + "<project/>");
+
+        assertThat(formatted).contains(doctype);
+        assertThat(formatted).contains("<project/>");
     }
 }

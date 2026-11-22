@@ -44,8 +44,12 @@ public class EntityConfigFactory {
     private static final AssociationDirection DEFAULT_ASSOCIATION_DIRECTION = UNIDIRECTIONAL;
     private static final CollectionType DEFAULT_COLLECTION_TYPE = CollectionType.ArrayList;
 
+    private final Config config;
+
     @Autowired
-    private Config config;
+    public EntityConfigFactory(Config config) {
+        this.config = config;
+    }
 
     public List<EntityConfig> filterEntityConfigs(List<EntityConfig> entityConfigs) {
         List<EntityConfig> result = newArrayList();

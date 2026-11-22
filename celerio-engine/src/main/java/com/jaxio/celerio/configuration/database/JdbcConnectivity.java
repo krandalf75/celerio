@@ -16,7 +16,6 @@
 
 package com.jaxio.celerio.configuration.database;
 
-import com.jaxio.celerio.util.StringUtil;
 import lombok.Setter;
 
 import java.util.List;
@@ -174,7 +173,7 @@ public class JdbcConnectivity {
         return oracleRetrieveSynonyms;
     }
 
-    /*
+    /**
      * When false, no indexes is reversed at all.
      * @return
      */

@@ -38,18 +38,20 @@ import static java.lang.Integer.parseInt;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static org.apache.commons.io.FilenameUtils.getName;
-import static org.apache.commons.io.IOUtils.closeQuietly;
 
 @Service
 @Slf4j
 public class VelocityGenerator {
 
+    private final VelocityEngine engine;
+
     @Autowired
-    private VelocityEngine engine;
+    public VelocityGenerator(VelocityEngine engine) {
+        this.engine = engine;
+    }
 
     public String evaluate(Map<String, Object> context, TemplatePack templatePack, Template template) throws IOException {
-        StringWriter sw = new StringWriter();
-        try {
+        try (StringWriter sw = new StringWriter()) {
             engine.evaluate(new VelocityContext(context), sw, template.getName(), template.getTemplate());
             return sw.toString();
         } catch (ParseErrorException parseException) {
@@ -63,8 +65,6 @@ public class VelocityGenerator {
             log.error("In " + templatePack.getName() + ":" + mie.getTemplateName() + " method [" + mie.getMethodName() + "] has not been set", mie.getCause());
             displayLinesInError(mie, templatePack, template);
             throw mie;
-        } finally {
-            closeQuietly(sw);
         }
     }
 
@@ -75,43 +75,35 @@ public class VelocityGenerator {
     }
 
     private void displayLinesInError(VelocityException exception, TemplatePack templatePack, Template template) {
-        try {
-            Scanner scanner = new Scanner(exception.getMessage());
+        try (Scanner scanner = new Scanner(exception.getMessage())) {
             String match = scanner.findInLine("\\[line (\\d+), column (\\d+)\\]");
             if (match == null) {
                 return;
             }
             MatchResult result = scanner.match();
-            int lineInError = parseInt(result.group(1));
+            int lineIndex = parseInt(result.group(1)) - 1;
             int column = parseInt(result.group(2));
 
-            String[] lines = template.getTemplate().split("\\n");
-
-            int linesBeforeToDisplay = 2;
-            int linesAfterToDisplay = 2;
-
-            for (int i = max(0, lineInError - linesBeforeToDisplay); i < lineInError; i++) {
-                System.err.println(prefix(templatePack, template, i + 1) + lines[i]);
+            String[] lines = template.getTemplate().split("\\n", -1);
+            if (lineIndex < 0 || lineIndex >= lines.length) {
+                return;
             }
-            String prefix = prefix(templatePack, template, lineInError);
-            System.err.print(prefix);
-            for (int i = 0; i < column - 1; i++) {
-                System.err.print(" ");
+            int caretPadding = Math.clamp((long) column - 1, 0, lines[lineIndex].length());
+            StringBuilder context = new StringBuilder();
+            for (int i = max(0, lineIndex - 2); i <= min(lines.length - 1, lineIndex + 2); i++) {
+                String linePrefix = prefix(templatePack, template, i + 1);
+                context.append(linePrefix).append(lines[i]).append('\n');
+                if (i == lineIndex) {
+                    context.append(linePrefix).append(" ".repeat(caretPadding)).append("^\n");
+                }
             }
-            System.err.println("^");
-            for (int i = lineInError; i < min(lines.length - 1, lineInError + linesAfterToDisplay); i++) {
-                System.err.println(prefix(templatePack, template, i + 1) + lines[i]);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+            log.error(context.toString());
+        } catch (IOException | RuntimeException e) {
+            log.debug("Could not display the Velocity template error context", e);
         }
     }
 
     private String prefix(TemplatePack templatePack, Template template, int line) {
-        return prefix(templatePack, template, "" + line);
-    }
-
-    private String prefix(TemplatePack templatePack, Template template, String message) {
-        return "[" + templatePack.getName() + ":" + getName(template.getName()) + ":" + message + "]";
+        return "[" + templatePack.getName() + ":" + getName(template.getName()) + ":" + line + "]";
     }
 }

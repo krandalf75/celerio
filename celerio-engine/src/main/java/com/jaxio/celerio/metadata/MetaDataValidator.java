@@ -24,14 +24,16 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-import static com.google.common.collect.Lists.newArrayList;
-
 @Service
 @Slf4j
 public class MetaDataValidator {
 
+    private final List<MetaDataRule<Table>> rules;
+
     @Autowired
-    private List<MetaDataRule<Table>> rules = newArrayList();
+    public MetaDataValidator(List<MetaDataRule<Table>> rules) {
+        this.rules = rules;
+    }
 
     public void validate(Metadata meta) {
         RuleReport report = new RuleReport();

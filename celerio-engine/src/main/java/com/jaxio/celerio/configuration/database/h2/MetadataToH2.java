@@ -83,11 +83,10 @@ public class MetadataToH2 {
     }
 
     private void createIndex(Table table, IndexHolder indexHolder) {
-        if (table.hasSimplePrimaryKey() && indexHolder.isSimple()) {
-            if (indexHolder.getIndex().getColumnName().equalsIgnoreCase(table.getPrimaryKey())) {
-                // skip simple pk (ie mysql)
-                return;
-            }
+        if (table.hasSimplePrimaryKey() && indexHolder.isSimple()
+                && indexHolder.getIndex().getColumnName().equalsIgnoreCase(table.getPrimaryKey())) {
+            // Skip the index already supplied by the primary key.
+            return;
         }
 
         line("CREATE ", indexHolder.isUnique() ? "UNIQUE " : "", "INDEX IF NOT EXISTS ", indexHolder.getName(), " ON ", table.getName(), " (",
@@ -150,7 +149,7 @@ public class MetadataToH2 {
     }
 
     private void removeLastChar(StringBuilder sb) {
-        if (sb.length() == 0) {
+        if (sb.isEmpty()) {
             return;
         }
 

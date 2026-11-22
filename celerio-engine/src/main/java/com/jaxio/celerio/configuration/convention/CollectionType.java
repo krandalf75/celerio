@@ -19,6 +19,7 @@ package com.jaxio.celerio.configuration.convention;
 import lombok.Getter;
 
 @Getter
+@SuppressWarnings("java:S115") // These names are accepted by Celerio configuration files.
 public enum CollectionType {
     ArrayList("java.util.List", "java.util.ArrayList", "javax.persistence.metamodel.ListAttribute"), //
     HashSet("java.util.Set", "java.util.HashSet", "javax.persistence.metamodel.SetAttribute");

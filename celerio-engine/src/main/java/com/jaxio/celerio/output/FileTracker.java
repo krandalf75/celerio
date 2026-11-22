@@ -28,14 +28,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map.Entry;
+import java.util.Set;
 
 import static com.google.common.collect.Maps.newHashMap;
-import static com.google.common.collect.Sets.newHashSet;
-import static org.apache.commons.io.IOUtils.closeQuietly;
 
 @Service
 @Slf4j
@@ -43,10 +42,14 @@ public class FileTracker {
     @Setter
     private String generatedFileLocation = ".celerio";
 
-    @Autowired
-    private IOUtil ioUtil;
+    private final IOUtil ioUtil;
 
-    private AntPathMatcher antPathMatcher = new AntPathMatcher();
+    @Autowired
+    public FileTracker(IOUtil ioUtil) {
+        this.ioUtil = ioUtil;
+    }
+
+    private final AntPathMatcher antPathMatcher = new AntPathMatcher();
 
     private String getFilename() {
         return generatedFileLocation + File.separatorChar + "generated.xml";
@@ -62,7 +65,8 @@ public class FileTracker {
         }
     }
 
-    @SuppressWarnings("unchecked")
+    // Keep the concrete return type in the existing public API.
+    @SuppressWarnings({"unchecked", "java:S1319"})
     public HashMap<String, FileMetaData> loadFromProjectDir(File projectDir) throws IOException {
         File xmlFileMetaDatas = new File(projectDir, getFilename());
 
@@ -72,12 +76,13 @@ public class FileTracker {
         }
 
         XStream xstream = createXStream();
-        FileInputStream in = new FileInputStream(xmlFileMetaDatas);
-        HashMap<String, FileMetaData> fileMetaDatas = (HashMap<String, FileMetaData>) xstream.fromXML(in);
-        closeQuietly(in);
-        return fileMetaDatas;
+        try (FileInputStream in = new FileInputStream(xmlFileMetaDatas)) {
+            return (HashMap<String, FileMetaData>) xstream.fromXML(in);
+        }
     }
 
+    // Keep the public signature and the existing HashMap XML representation.
+    @SuppressWarnings("java:S1319")
     public void saveToProjectDir(HashMap<String, FileMetaData> fileMetaDatas, File projectDir) throws IOException {
         File xmlFileMetaDatas = new File(projectDir, getFilename());
         File parent = xmlFileMetaDatas.getParentFile();
@@ -87,14 +92,13 @@ public class FileTracker {
         } // else child was for example "."
 
         XStream xstream = createXStream();
-        FileOutputStream out = new FileOutputStream(xmlFileMetaDatas);
-        xstream.toXML(fileMetaDatas, out);
-        closeQuietly(out);
+        try (FileOutputStream out = new FileOutputStream(xmlFileMetaDatas)) {
+            xstream.toXML(fileMetaDatas, out);
+        }
     }
 
     private XStream createXStream() {
         XStream xstream = new XStream();
-        XStream.setupDefaultSecurity(xstream);
         xstream.allowTypesByWildcard(new String[]{
                 "com.jaxio.celerio.output.*",
                 "java.util.*"
@@ -102,73 +106,60 @@ public class FileTracker {
         return xstream;
     }
 
+    @SuppressWarnings("java:S1319") // Keep the concrete return type for existing callers.
     public HashSet<FileMetaData> deleteGeneratedFileIfIdentical(File projectDir, List<String> excludedPatterns) throws IOException {
         SCMStatus scmStatus = getSCMStatus(projectDir);
-
-        HashSet<FileMetaData> scmFiles = newHashSet();
-        HashSet<FileMetaData> deletedFiles = newHashSet();
-        HashSet<FileMetaData> notFoundFiles = newHashSet();
-
-        File xmlFileMetaDatas = new File(projectDir, getFilename());
-
-        if (!xmlFileMetaDatas.exists()) {
-            info("CANNOT FIND FILE TRACKER METADATA " + xmlFileMetaDatas.getAbsolutePath());
+        var deletedFiles = new HashSet<FileMetaData>();
+        File trackerFile = new File(projectDir, getFilename());
+        if (!trackerFile.exists()) {
+            info("CANNOT FIND FILE TRACKER METADATA " + trackerFile.getAbsolutePath());
             return deletedFiles;
         }
 
-        HashMap<String, FileMetaData> filesToScan = loadFromProjectDir(projectDir);
-
-        for (Entry<String, FileMetaData> entry : filesToScan.entrySet()) {
-            FileMetaData oldFmd = entry.getValue();
-            String relativePath = entry.getKey();
-            File oldFile = new File(projectDir, relativePath);
-
-            if (oldFile.exists()) {
-                if (scmStatus.isUnderSCM(relativePath)) {
-                    info("skip delete (file now under SCM): " + entry.getKey());
-                    scmFiles.add(oldFmd);
-                    continue;
-                }
-
-                if (oldFmd.isBootstrapFile()) {
-                    info("skip file generated during bootstrap: " + entry.getKey());
-                    continue;
-                }
-
-                FileMetaData recentFmd = new FileMetaData(null, null, entry.getKey(), oldFile);
-                // info("recent: " +recentFmd.toString());
-                // info("old: " + oldFmd.toString());
-
-                if (oldFmd.equals(recentFmd)) {
-                    if (mustExcludeFile(relativePath, excludedPatterns)) {
-                        info("skip delete (present in excludedFiles): " + entry.getKey());
-                    } else {
-                        info("delete: " + entry.getKey());
-                        oldFile.delete();
-                        ioUtil.pruneEmptyDirs(oldFile);
-                        deletedFiles.add(recentFmd);
-                    }
-                } else {
-                    info("skip delete (potential user modifications): " + entry.getKey());
-                }
-            } else {
-                info("skip delete (no longer exists): " + entry.getKey());
-                notFoundFiles.add(oldFmd);
-            }
-        }
-
-        for (FileMetaData fmd : scmFiles) {
-            filesToScan.remove(fmd.getFileRelativePath());
-        }
-        for (FileMetaData fmd : deletedFiles) {
-            filesToScan.remove(fmd.getFileRelativePath());
-        }
-        for (FileMetaData fmd : notFoundFiles) {
-            filesToScan.remove(fmd.getFileRelativePath());
-        }
+        var filesToScan = loadFromProjectDir(projectDir);
+        filesToScan.entrySet().removeIf(entry -> removeTrackedFile(projectDir, scmStatus, excludedPatterns,
+                entry.getKey(), entry.getValue(), deletedFiles));
         info("rewrite file tracker metadata: " + getFilename());
         saveToProjectDir(filesToScan, projectDir);
         return deletedFiles;
+    }
+
+    private boolean removeTrackedFile(File projectDir, SCMStatus scmStatus, List<String> excludedPatterns,
+            String relativePath, FileMetaData trackedFile, Set<FileMetaData> deletedFiles) {
+        File file = new File(projectDir, relativePath);
+        if (!file.exists()) {
+            info("skip delete (no longer exists): " + relativePath);
+            return true;
+        }
+        if (scmStatus.isUnderSCM(relativePath)) {
+            info("skip delete (file now under SCM): " + relativePath);
+            return true;
+        }
+        if (trackedFile.isBootstrapFile()) {
+            info("skip file generated during bootstrap: " + relativePath);
+            return false;
+        }
+        FileMetaData currentFile = new FileMetaData(null, null, relativePath, file);
+        if (!trackedFile.equals(currentFile)) {
+            info("skip delete (potential user modifications): " + relativePath);
+            return false;
+        }
+        if (mustExcludeFile(relativePath, excludedPatterns)) {
+            info("skip delete (present in excludedFiles): " + relativePath);
+            return false;
+        }
+
+        info("delete: " + relativePath);
+        try {
+            if (Files.deleteIfExists(file.toPath())) {
+                ioUtil.pruneEmptyDirs(file);
+                deletedFiles.add(currentFile);
+            }
+            return true;
+        } catch (IOException | SecurityException e) {
+            log.warn("Could not delete generated file {}", relativePath, e);
+            return false;
+        }
     }
 
     private void info(String msg) {

@@ -34,14 +34,14 @@ import static org.apache.commons.lang.StringUtils.isNotBlank;
 @Slf4j
 public class RelationCollisionUtil {
 
-    private Set<String> fullVars = newHashSet();
+    private final Set<String> fullVars = newHashSet();
 
     public void addVar(String entityType, String attributeVar) {
         fullVars.add(clashKey(entityType, attributeVar));
     }
 
     /**
-     * During construction, we may free a var.
+     * During construction, we may free a property name.
      */
     public void removeVar(String entityType, String attributeVar) {
         fullVars.remove(clashKey(entityType, attributeVar));
@@ -182,23 +182,25 @@ public class RelationCollisionUtil {
         return getXToOneNamerByConvention(fromAttribute, fromAttribute.getEntity().getName(), fromAttribute.getVar(), targetEntityNamer);
     }
 
+    // Preserve the contextual argument for subclasses that override the naming convention.
+    @SuppressWarnings("java:S1172")
     protected Namer getXToOneNamerByConvention(Attribute fromAttribute, String fromEntityName, String fromAttributeVar, Namer targetEntityNamer) {
-        String var = null;
+        String propertyName = null;
         if (fromAttributeVar.toUpperCase().endsWith("ID")) {
             if (fromAttributeVar.length() > 2) {
                 // attribute is "somethingId" ==> x to one is "something"
-                var = fromAttributeVar.substring(0, fromAttributeVar.length() - 2);
+                propertyName = fromAttributeVar.substring(0, fromAttributeVar.length() - 2);
             }
         } else {
-            var = fromAttributeVar; // + "Ref";
+            propertyName = fromAttributeVar; // + "Ref";
         }
 
-        if (var == null) {
-            var = targetEntityNamer.getVar();
+        if (propertyName == null) {
+            propertyName = targetEntityNamer.getVar();
         }
 
         // with convention we do our best to avoid clash.
-        return new AccessorNamer(targetEntityNamer, getClashSafeVar(fromEntityName, var));
+        return new AccessorNamer(targetEntityNamer, getClashSafeVar(fromEntityName, propertyName));
     }
 
     protected Namer getOneToManyNamerFromConf(OneToManyConfig o2m, Namer fromEntityNamer) {
@@ -269,6 +271,8 @@ public class RelationCollisionUtil {
         return fromEntityNamer;
     }
 
+    // Preserve the column configuration argument for custom naming conventions.
+    @SuppressWarnings("java:S1172")
     protected Namer getManyToManyNamerByConvention(Namer fromEntityNamer, ColumnConfig cc, Namer toEntityNamer) {
         String javaField = toEntityNamer.getVar();
         return new AccessorNamer(toEntityNamer, getClashSafeVar(fromEntityNamer.getType(), javaField));

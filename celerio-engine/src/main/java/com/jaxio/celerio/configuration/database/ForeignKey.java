@@ -62,7 +62,7 @@ public class ForeignKey {
     }
 
     public void addImportedKeys(List<ImportedKey> ikeys) {
-        Assert.isTrue(ikeys.size() > 0, "there must be at least one imported key");
+        Assert.isTrue(!ikeys.isEmpty(), "there must be at least one imported key");
 
         for (ImportedKey ikey : ikeys) {
             addImportedKey(ikey);

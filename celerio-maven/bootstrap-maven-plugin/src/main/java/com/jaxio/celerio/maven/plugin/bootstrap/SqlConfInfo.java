@@ -21,6 +21,8 @@ import org.springframework.core.io.Resource;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 import java.util.Properties;
 
 /**
@@ -29,13 +31,15 @@ import java.util.Properties;
 @Getter
 public class SqlConfInfo implements Comparable<SqlConfInfo> {
 
-    private String name;
-    private String description;
-    private String description2;
+    private final String name;
+    private final String description;
+    private final String description2;
 
     public SqlConfInfo(Resource sqlConfInfoAsResource) throws IOException {
         Properties sqlConfInfoAsProperties = new Properties();
-        sqlConfInfoAsProperties.load(new InputStreamReader(sqlConfInfoAsResource.getInputStream(), "UTF-8"));
+        try (InputStreamReader reader = new InputStreamReader(sqlConfInfoAsResource.getInputStream(), StandardCharsets.UTF_8)) {
+            sqlConfInfoAsProperties.load(reader);
+        }
         this.name = sqlConfInfoAsProperties.getProperty("name");
         this.description = sqlConfInfoAsProperties.getProperty("description");
         this.description2 = sqlConfInfoAsProperties.getProperty("description2");
@@ -44,5 +48,15 @@ public class SqlConfInfo implements Comparable<SqlConfInfo> {
     @Override
     public int compareTo(SqlConfInfo o) {
         return name.compareTo(o.getName());
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        return other instanceof SqlConfInfo info && Objects.equals(name, info.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(name);
     }
 }

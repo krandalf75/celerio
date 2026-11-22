@@ -22,7 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 
 import java.io.*;
-import java.util.Date;
+import java.time.Instant;
 import java.util.SortedSet;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
@@ -35,9 +35,9 @@ import static org.apache.commons.io.FilenameUtils.normalize;
 @Slf4j
 public class ZipOutputResult implements OutputResult {
 
-    private String filename;
+    private final String filename;
 
-    private SortedSet<String> fileList = newTreeSet();
+    private final SortedSet<String> fileList = newTreeSet();
 
     private BufferedOutputStream bufferedOutputStream;
 
@@ -108,7 +108,7 @@ public class ZipOutputResult implements OutputResult {
 
         // Add archive entry
         ZipEntry zipEntry = new JarEntry(normalize(entryName));
-        zipEntry.setTime((new Date()).getTime());
+        zipEntry.setTime(Instant.now().toEpochMilli());
         zipOutputStream.putNextEntry(zipEntry);
 
         IOUtils.copy(contentStream, zipOutputStream);

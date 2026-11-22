@@ -28,19 +28,22 @@ import static com.google.common.collect.Lists.newArrayList;
 
 @Slf4j
 public class AuditLogConvention {
-    private Iterable<String> authorCandidates = newArrayList("author", "auteur");
-    private Iterable<String> operationCandidates = newArrayList("event");
-    private Iterable<String> operationDateCandidates = newArrayList("eventDate");
-    private Iterable<String> string1Candidates = newArrayList("stringAttribute1", "attribute1", "string1");
-    private Iterable<String> string2Candidates = newArrayList("stringAttribute2", "attribute2", "string2");
-    private Iterable<String> string3Candidates = newArrayList("stringAttribute3", "attribute3", "string3");
-    private ArrayList<String> entityNames = newArrayList("auditLog", "auditTrail", "audit");
+
+    private static final String FOUND_ON = " found on ";
+    private final Iterable<String> authorCandidates = newArrayList("author", "auteur");
+    private final Iterable<String> operationCandidates = newArrayList("event");
+    private final Iterable<String> operationDateCandidates = newArrayList("eventDate");
+    private final Iterable<String> string1Candidates = newArrayList("stringAttribute1", "attribute1", "string1");
+    private final Iterable<String> string2Candidates = newArrayList("stringAttribute2", "attribute2", "string2");
+    private final Iterable<String> string3Candidates = newArrayList("stringAttribute3", "attribute3", "string3");
+    private final ArrayList<String> entityNames = newArrayList("auditLog", "auditTrail", "audit");
     @Getter
     private final AuditLogAttribute auditLogAttribute;
     private final Entity e;
     @Getter
     private final boolean match;
 
+    @SuppressWarnings("java:S6832") // The model creates this helper directly for each entity or attribute.
     public AuditLogConvention(Entity e) {
         this.e = e;
         auditLogAttribute = attributes(e);
@@ -76,7 +79,7 @@ public class AuditLogConvention {
         for (Attribute a : e.getAttributes().getList()) {
             if (a.isString() && match(a.getVar(), string1Candidates)) {
                 auditLogAttributes.setStringAttribute1(a);
-                log.debug("'stringAttribute1' candidate: " + a.getVar() + " found on " + e.getName());
+                log.debug("'stringAttribute1' candidate: " + a.getVar() + FOUND_ON + e.getName());
                 return;
             }
         }
@@ -86,7 +89,7 @@ public class AuditLogConvention {
         for (Attribute a : e.getAttributes().getList()) {
             if (a.isString() && match(a.getVar(), string2Candidates)) {
                 auditLogAttributes.setStringAttribute2(a);
-                log.debug("'stringAttribute2' candidate: " + a.getVar() + " found on " + e.getName());
+                log.debug("'stringAttribute2' candidate: " + a.getVar() + FOUND_ON + e.getName());
                 return;
             }
         }
@@ -96,7 +99,7 @@ public class AuditLogConvention {
         for (Attribute a : e.getAttributes().getList()) {
             if (a.isString() && match(a.getVar(), string3Candidates)) {
                 auditLogAttributes.setStringAttribute3(a);
-                log.debug("'stringAttribute3' candidate: " + a.getVar() + " found on " + e.getName());
+                log.debug("'stringAttribute3' candidate: " + a.getVar() + FOUND_ON + e.getName());
                 return;
             }
         }
@@ -106,7 +109,7 @@ public class AuditLogConvention {
         for (Attribute a : e.getDateAttributes().getList()) {
             if (a.isDate() && match(a.getVar(), operationDateCandidates)) {
                 auditLogAttributes.setEventDate(a);
-                log.debug("'eventDate' candidate: " + a.getVar() + " found on " + e.getName());
+                log.debug("'eventDate' candidate: " + a.getVar() + FOUND_ON + e.getName());
                 return;
             }
         }
@@ -116,7 +119,7 @@ public class AuditLogConvention {
         for (Attribute a : e.getSimpleStringAttributes().getList()) {
             if (a.isString() && match(a.getVar(), operationCandidates)) {
                 auditLogAttributes.setEvent(a);
-                log.debug("'event' candidate: " + a.getVar() + " found on " + e.getName());
+                log.debug("'event' candidate: " + a.getVar() + FOUND_ON + e.getName());
                 return;
             }
         }
@@ -126,7 +129,7 @@ public class AuditLogConvention {
         for (Attribute a : e.getSimpleStringAttributes().getList()) {
             if (a.isString() && match(a.getVar(), authorCandidates)) {
                 auditLogAttributes.setAuthor(a);
-                log.debug("'author' candidate: " + a.getVar() + " found on " + e.getName());
+                log.debug("'author' candidate: " + a.getVar() + FOUND_ON + e.getName());
                 return;
             }
         }

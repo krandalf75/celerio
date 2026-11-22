@@ -58,7 +58,7 @@ public class JpaIntermediateManyToOneRelation implements RelationSpi, PackageImp
         return new AnnotationBuilder( //
                 getManyToOneAnnotation(), //
                 getJoinTableAnnotation(), //
-                getCacheAnnotation()) // TODO ? getSpecificJoinFetchAnnotation(), as for many to many ?
+                getCacheAnnotation())
                 .getAnnotations();
     }
 

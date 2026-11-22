@@ -25,6 +25,7 @@ import static org.apache.commons.lang.StringUtils.stripToNull;
 import static org.apache.commons.lang.WordUtils.capitalize;
 import static org.springframework.util.StringUtils.hasLength;
 
+@SuppressWarnings("java:S115") // These names are configuration values and template variables.
 public enum ClassType {
     // backend related
     model("", GeneratedPackage.Model), //
@@ -96,6 +97,7 @@ public enum ClassType {
         return hasLength(getSubPackage());
     }
 
+    @SuppressWarnings("java:S3066") // ClassTypeOverride applies this setting from project configuration.
     public void setGeneratedPackage(GeneratedPackage generatedPackage) {
         this.generatedPackage = firstNonNull(generatedPackage, this.generatedPackage);
     }

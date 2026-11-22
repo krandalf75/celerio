@@ -23,7 +23,7 @@ import com.jaxio.celerio.spi.AttributeSpi;
 import com.jaxio.celerio.template.ImportsContext;
 import com.jaxio.celerio.util.MappedType;
 
-// TODO: all this class is a big hack as ValueGenerator is hardcoded
+/** Builds expressions for the generated application's ValueGenerator. */
 public class ValuesAttribute implements AttributeSpi {
     private Attribute attribute;
 
@@ -48,60 +48,83 @@ public class ValuesAttribute implements AttributeSpi {
     public String getDummy() {
         if (attribute.isInPk() || attribute.isUnique()) {
             return getUnique();
-        } else if (attribute.isEnum()) {
-            return getDefaultEnum();
-        } else if (attribute.isBoolean()) {
-            return "true";
-        } else if (attribute.isLocalDateOrTime() || attribute.isZonedDateTime()) {
-            return attribute.getMappedType().getFullJavaType() + ".now()"; // TODO: nice import
-        } else if (attribute.getMappedType() == MappedType.M_UTILDATE) {
-            return "new " + attribute.getMappedType().getJavaType() + "()";
-        } else if (attribute.getMappedType() == MappedType.M_TIMESTAMP) {
-            return "new java.sql.Timestamp(new Date().getTime())";
-        } else if (attribute.isDate()) {
-            return "new Date()";
-        } else if (attribute.isEmail()) {
-            return "\"dummy@dummy.com\"";
-        } else if (attribute.isContentType()) {
-            return "\"application/text\"";
-        } else if (attribute.isFilename()) {
-            return "\"dummy.txt\"";
-        } else if (attribute.isBlob()) {
-            return "\"dummy\".getBytes()";
-        } else if (attribute.isInteger()) {
-            return "1";
-        } else if (attribute.isLong()) {
-            return "1l";
-        } else if (attribute.isFloat()) {
-            return "1f";
-        } else if (attribute.isDouble()) {
-            return "1d";
-        } else if (attribute.isBigInteger()) {
-            return "BigInteger.ONE";
-        } else if (attribute.isBigDecimal()) {
-            return "BigDecimal.ONE";
-        } else if (attribute.getMappedType().isChar()) {
-            return "'a'";
-        } else if (attribute.getMappedType().isByte()) {
-            return "(byte)1";
-        } else if (attribute.isUrl()) {
-            return "\"http://www.jaxio.com\"";
-        } else if (attribute.getMappedType().isString() && attribute.isFixedSize()) {
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < attribute.getSize(); i++) {
-                sb.append("d");
-            }
-            return "\"" + sb.toString() + "\"";
-        } else if (attribute.getMappedType().isString() && attribute.getColumnConfig().getMin() != null) {
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < attribute.getColumnConfig().getMin(); i++) {
-                sb.append("a");
-            }
-            return "\"" + sb.toString() + "\"";
-        } else {
-
-            return "\"a\"";
         }
+        if (attribute.isEnum()) {
+            return getDefaultEnum();
+        }
+        if (attribute.isBoolean()) {
+            return "true";
+        }
+        if (attribute.isDate()) {
+            return getDummyDate();
+        }
+        if (attribute.isEmail()) {
+            return "\"dummy@dummy.com\"";
+        }
+        if (attribute.isContentType()) {
+            return "\"application/text\"";
+        }
+        if (attribute.isFilename()) {
+            return "\"dummy.txt\"";
+        }
+        if (attribute.isBlob()) {
+            return "\"dummy\".getBytes()";
+        }
+        return getDummyScalar();
+    }
+
+    private String getDummyDate() {
+        if (attribute.isLocalDateOrTime() || attribute.isZonedDateTime()) {
+            return attribute.getMappedType().getFullJavaType() + ".now()";
+        }
+        if (attribute.getMappedType() == MappedType.M_UTILDATE) {
+            return "new " + attribute.getMappedType().getJavaType() + "()";
+        }
+        if (attribute.getMappedType() == MappedType.M_TIMESTAMP) {
+            return "new java.sql.Timestamp(new Date().getTime())";
+        }
+        return "new Date()";
+    }
+
+    private String getDummyScalar() {
+        if (attribute.isInteger()) {
+            return "1";
+        }
+        if (attribute.isLong()) {
+            return "1l";
+        }
+        if (attribute.isFloat()) {
+            return "1f";
+        }
+        if (attribute.isDouble()) {
+            return "1d";
+        }
+        if (attribute.isBigInteger()) {
+            return "BigInteger.ONE";
+        }
+        if (attribute.isBigDecimal()) {
+            return "BigDecimal.ONE";
+        }
+        if (attribute.getMappedType().isChar()) {
+            return "'a'";
+        }
+        if (attribute.getMappedType().isByte()) {
+            return "(byte)1";
+        }
+        if (attribute.isUrl()) {
+            return "\"http://www.jaxio.com\"";
+        }
+        if (attribute.getMappedType().isString() && attribute.isFixedSize()) {
+            return javaString("d", attribute.getSize());
+        }
+        if (attribute.getMappedType().isString() && attribute.getColumnConfig().getMin() != null) {
+            return javaString("a", attribute.getColumnConfig().getMin());
+        }
+        return "\"a\"";
+    }
+
+    private String javaString(String value, int count) {
+        return "\"" + value.repeat(Math.max(0, count)) + "\"";
     }
 
     public String getNullDummy() {

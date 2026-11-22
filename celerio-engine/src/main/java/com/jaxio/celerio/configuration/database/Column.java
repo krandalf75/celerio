@@ -195,22 +195,17 @@ public class Column {
             builder.append(getQuote());
         } else if (type.isTemporal() && getColumnDef() != null && getColumnDef().toUpperCase().contains("SYSDATE")) {
             builder.append(" default SYSDATE");
-        } else if (type.isTemporal() && getColumnDef() != null && getColumnDef().toUpperCase().startsWith("NEXTVAL(")) {
-            // TODO
         }
 
         return builder.toString();
     }
 
     private boolean supportH2Scale() {
-        if ("DOUBLE".equalsIgnoreCase(type.name())) {
-            return false;
-        }
-        return true;
+        return !"DOUBLE".equalsIgnoreCase(type.name());
     }
 
     private boolean hasSimpleDefaultValue() {
-        if (type.isNumeric() && getColumnDef() != null && getColumnDef().length() == 0) {
+        if (type.isNumeric() && getColumnDef() != null && getColumnDef().isEmpty()) {
             return false;
         }
         return getColumnDef() != null && !getColumnDef().startsWith("(") && !type.isTemporal() && !getColumnDef().toLowerCase().startsWith("nextval");

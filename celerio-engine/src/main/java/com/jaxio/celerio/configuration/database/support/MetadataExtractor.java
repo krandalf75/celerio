@@ -16,7 +16,6 @@
 
 package com.jaxio.celerio.configuration.database.support;
 
-import com.google.common.base.Joiner;
 import com.jaxio.celerio.configuration.database.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,11 +30,21 @@ import static com.jaxio.celerio.util.EncodingUtil.fixIso;
 @Service
 @Slf4j
 public class MetadataExtractor {
+    private static final String COLUMN_NAME = "COLUMN_NAME";
+
     boolean isOracle;
     boolean isDB2;
     boolean useLabel;
+    private final List<Extension> extensions;
+
+    public MetadataExtractor() {
+        this(Collections.emptyList());
+    }
+
     @Autowired
-    private List<Extension> extensions;
+    public MetadataExtractor(List<Extension> extensions) {
+        this.extensions = extensions;
+    }
 
     public Metadata extract(JdbcConnectivity configuration) throws ClassNotFoundException, SQLException {
         Class<?> jdbcDriverClass = Class.forName(configuration.getDriver());
@@ -52,14 +61,10 @@ public class MetadataExtractor {
             }
         }
 
-        Connection connection = getDatabaseConnection(configuration);
-
-        try {
+        try (Connection connection = getDatabaseConnection(configuration)) {
+            connection.setReadOnly(true);
+            log.info("Connected OK");
             return extract(configuration, connection);
-        } finally {
-            if (connection != null) {
-                connection.close();
-            }
         }
     }
 
@@ -67,6 +72,8 @@ public class MetadataExtractor {
         return extract(new JdbcConnectivity(TableType.TABLE), connection);
     }
 
+    // Keep the checked exception in the public API for existing metadata clients.
+    @SuppressWarnings("java:S1130")
     public Metadata extract(JdbcConnectivity jdbcConnectivity, Connection connection) throws ClassNotFoundException, SQLException {
         DatabaseMetaData databaseMetadata = connection.getMetaData();
         Metadata metadata = new Metadata();
@@ -85,7 +92,7 @@ public class MetadataExtractor {
         return metadata;
     }
 
-    private Connection getDatabaseConnection(JdbcConnectivity configuration) throws ClassNotFoundException, SQLException {
+    private Connection getDatabaseConnection(JdbcConnectivity configuration) throws SQLException {
 
         if (log.isInfoEnabled()) {
             log.info("Connecting to Database jdbcUrl=" + configuration.getUrl());
@@ -112,20 +119,14 @@ public class MetadataExtractor {
             }
         }
 
-        Connection dbConnection = DriverManager.getConnection(configuration.getUrl(), info);
-        dbConnection.setReadOnly(true);
-
-        if (log.isInfoEnabled()) {
-            log.info("Connected OK");
-        }
-        return dbConnection;
+        return DriverManager.getConnection(configuration.getUrl(), info);
     }
 
-    private boolean isOracle(Class<?> jdbcDriverClass) throws ClassNotFoundException {
+    private boolean isOracle(Class<?> jdbcDriverClass) {
         return jdbcDriverClass.getName().toLowerCase().contains("oracle");
     }
 
-    private boolean isDB2(Class<?> jdbcDriverClass) throws ClassNotFoundException {
+    private boolean isDB2(Class<?> jdbcDriverClass) {
         return jdbcDriverClass.getName().toLowerCase().contains("db2");
     }
 
@@ -139,82 +140,80 @@ public class MetadataExtractor {
 
     private void loadColumns(DatabaseMetaData databaseMetaData, Table table) throws SQLException {
         log.info("Extracting columns for table: " + table.getName());
-        ResultSet resultSet = databaseMetaData.getColumns(table.getCatalog(), table.getSchemaName(), table.getName(), "%");
-        ResultSetWrapper rsw = new ResultSetColumns(resultSet, useLabel);
+        try (ResultSet resultSet = databaseMetaData.getColumns(table.getCatalog(), table.getSchemaName(), table.getName(), "%")) {
+            ResultSetWrapper rsw = new ResultSetColumns(resultSet, useLabel);
 
-        while (resultSet.next()) {
-            Column c = new Column();
+            while (resultSet.next()) {
+                Column c = new Column();
 
-            // fill it
-            c.setName(getString(rsw, "COLUMN_NAME"));
-            c.setType(JdbcType.fromJdbcType(rsw.getInt("DATA_TYPE")));
-            c.setSize(rsw.getInt("COLUMN_SIZE"));
-            c.setDecimalDigits(rsw.getInt("DECIMAL_DIGITS"));
-            c.setNullable(isNullable(rsw.getInt("NULLABLE")));
-            String remarks = getString(rsw, "REMARKS");
-            if (notEmpty(remarks)) {
-                c.setRemarks(remarks);
-            }
-            String columnDef = getString(rsw, "COLUMN_DEF");
-            if (notEmpty(columnDef)) {
-                c.setColumnDef(columnDef);
-            }
-            c.setOrdinalPosition(rsw.getInt("ORDINAL_POSITION"));
+                // fill it
+                c.setName(getString(rsw, COLUMN_NAME));
+                c.setType(JdbcType.fromJdbcType(rsw.getInt("DATA_TYPE")));
+                c.setSize(rsw.getInt("COLUMN_SIZE"));
+                c.setDecimalDigits(rsw.getInt("DECIMAL_DIGITS"));
+                c.setNullable(isNullable(rsw.getInt("NULLABLE")));
+                String remarks = getString(rsw, "REMARKS");
+                if (notEmpty(remarks)) {
+                    c.setRemarks(remarks);
+                }
+                String columnDef = getString(rsw, "COLUMN_DEF");
+                if (notEmpty(columnDef)) {
+                    c.setColumnDef(columnDef);
+                }
+                c.setOrdinalPosition(rsw.getInt("ORDINAL_POSITION"));
 
-            try {
-                // not all driver may support it, it was added post jdk 1.4.2
-                String autoIncrement = getString(rsw, "IS_AUTOINCREMENT");
-                if ("YES".equalsIgnoreCase(autoIncrement)) {
-                    c.setAutoIncrement(Boolean.TRUE);
-                } else if ("NO".equalsIgnoreCase(autoIncrement)) {
-                    c.setAutoIncrement(Boolean.FALSE);
-                } else {
+                try {
+                    // not all driver may support it, it was added post jdk 1.4.2
+                    String autoIncrement = getString(rsw, "IS_AUTOINCREMENT");
+                    if ("YES".equalsIgnoreCase(autoIncrement)) {
+                        c.setAutoIncrement(Boolean.TRUE);
+                    } else if ("NO".equalsIgnoreCase(autoIncrement)) {
+                        c.setAutoIncrement(Boolean.FALSE);
+                    } else {
+                        c.setAutoIncrement(null);
+                    }
+                } catch (SQLException _) {
                     c.setAutoIncrement(null);
                 }
-            } catch (SQLException sqle) {
-                c.setAutoIncrement(null);
+
+                // add it
+                table.addColumn(c);
             }
-
-            // add it
-            table.addColumn(c);
         }
-
-        resultSet.close();
     }
 
     private void loadImportedKeys(DatabaseMetaData databaseMetaData, Table table, Metadata metaData) throws SQLException {
         log.info("Extracting imported keys for table: " + table.getName());
 
-        ResultSet resultSet = databaseMetaData.getImportedKeys(table.getCatalog(), table.getSchemaName(), table.getName());
-        ResultSetWrapper rsw = new ResultSetImportedKeys(resultSet, useLabel);
+        try (ResultSet resultSet = databaseMetaData.getImportedKeys(table.getCatalog(), table.getSchemaName(), table.getName())) {
+            ResultSetWrapper rsw = new ResultSetImportedKeys(resultSet, useLabel);
 
-        while (resultSet.next()) {
-            ImportedKey importedKey = new ImportedKey();
+            while (resultSet.next()) {
+                ImportedKey importedKey = new ImportedKey();
 
-            // fill it
-            importedKey.setPkTableCatalog(getString(rsw, "PKTABLE_CAT"));
-            importedKey.setPkTableSchema(getString(rsw, "PKTABLE_SCHEM"));
-            importedKey.setPkTableName(getString(rsw, "PKTABLE_NAME"));
-            importedKey.setPkColumnName(getString(rsw, "PKCOLUMN_NAME"));
+                // fill it
+                importedKey.setPkTableCatalog(getString(rsw, "PKTABLE_CAT"));
+                importedKey.setPkTableSchema(getString(rsw, "PKTABLE_SCHEM"));
+                importedKey.setPkTableName(getString(rsw, "PKTABLE_NAME"));
+                importedKey.setPkColumnName(getString(rsw, "PKCOLUMN_NAME"));
 
-            importedKey.setFkName(getString(rsw, "FK_NAME"));
-            importedKey.setFkColumnName(getString(rsw, "FKCOLUMN_NAME"));
+                importedKey.setFkName(getString(rsw, "FK_NAME"));
+                importedKey.setFkColumnName(getString(rsw, "FKCOLUMN_NAME"));
 
-            // With DB2 we observed some duplicate in FK due to presence of table alias. Here is an example:
-            // <importedKey fkColumnName="ADMRDEPT" fkName="ROD" pkColumnName="DEPTNO" pkTableName="DEPARTMENT"/>
-            // <importedKey fkColumnName="ADMRDEPT" fkName="ROD" pkColumnName="DEPTNO" pkTableName="DEPT"/>
-            // DEPT is in fact a table alias!
-            // to circumvent the issue, we make sure the imported key points to a table reversed.
+                // With DB2 we observed some duplicate in FK due to presence of table alias. Here is an example:
+                // <importedKey fkColumnName="ADMRDEPT" fkName="ROD" pkColumnName="DEPTNO" pkTableName="DEPARTMENT"/>
+                // <importedKey fkColumnName="ADMRDEPT" fkName="ROD" pkColumnName="DEPTNO" pkTableName="DEPT"/>
+                // DEPT is in fact a table alias!
+                // to circumvent the issue, we make sure the imported key points to a table reversed.
 
-            if (metaData.getTableBySchemaAndName(importedKey.getPkTableSchema(), importedKey.getPkTableName()) != null) {
-                // add it
-                table.addImportedKey(importedKey);
-            } else {
-                log.warn("Ignoring imported key whose 'pkTableName' cannot be found: " + importedKey);
+                if (metaData.getTableBySchemaAndName(importedKey.getPkTableSchema(), importedKey.getPkTableName()) != null) {
+                    // add it
+                    table.addImportedKey(importedKey);
+                } else {
+                    log.warn("Ignoring imported key whose 'pkTableName' cannot be found: " + importedKey);
+                }
             }
         }
-
-        resultSet.close();
     }
 
     private void loadIndexes(JdbcConnectivity configuration, DatabaseMetaData databaseMetaData, Table table) throws SQLException {
@@ -238,20 +237,19 @@ public class MetadataExtractor {
         // unique or not
         boolean useApproximation = true; // / when true, result is allowed to reflect approximate or out of data values; when false, results are requested to be
         // accurate
-        ResultSet resultSet = databaseMetaData.getIndexInfo(table.getCatalog(), table.getSchemaName(), table.getName(), retreiveOnlyUniques,
-                useApproximation);
-        ResultSetWrapper rsw = new ResultSetIndexInfo(resultSet, useLabel);
+        try (ResultSet resultSet = databaseMetaData.getIndexInfo(table.getCatalog(), table.getSchemaName(), table.getName(), retreiveOnlyUniques,
+                useApproximation)) {
+            ResultSetWrapper rsw = new ResultSetIndexInfo(resultSet, useLabel);
 
-        while (resultSet.next()) {
-            Index index = new Index();
-            index.setIndexName(getString(rsw, "INDEX_NAME"));
-            index.setColumnName(getString(rsw, "COLUMN_NAME"));
-            index.setNonUnique(rsw.getBoolean("NON_UNIQUE"));
+            while (resultSet.next()) {
+                Index index = new Index();
+                index.setIndexName(getString(rsw, "INDEX_NAME"));
+                index.setColumnName(getString(rsw, COLUMN_NAME));
+                index.setNonUnique(rsw.getBoolean("NON_UNIQUE"));
 
-            table.addIndex(index);
+                table.addIndex(index);
+            }
         }
-
-        resultSet.close();
 
         long t1 = System.currentTimeMillis();
 
@@ -267,14 +265,13 @@ public class MetadataExtractor {
     private void loadPrimaryKeys(DatabaseMetaData databaseMetaData, Table table) throws SQLException {
         log.info("Extracting primary key for table: " + table.getName());
 
-        ResultSet resultSet = databaseMetaData.getPrimaryKeys(table.getCatalog(), table.getSchemaName(), table.getName());
-        ResultSetWrapper rsw = new ResultSetPrimaryKeys(resultSet, useLabel);
+        try (ResultSet resultSet = databaseMetaData.getPrimaryKeys(table.getCatalog(), table.getSchemaName(), table.getName())) {
+            ResultSetWrapper rsw = new ResultSetPrimaryKeys(resultSet, useLabel);
 
-        while (resultSet.next()) {
-            table.addPrimaryKey(getString(rsw, "COLUMN_NAME"));
+            while (resultSet.next()) {
+                table.addPrimaryKey(getString(rsw, COLUMN_NAME));
+            }
         }
-
-        resultSet.close();
     }
 
     private DatabaseInfo extractDatabaseInfo(DatabaseMetaData databaseMetaData) {
@@ -283,43 +280,43 @@ public class MetadataExtractor {
         // database
         try {
             database.setDatabaseProductName(databaseMetaData.getDatabaseProductName());
-        } catch (Exception e) { /* ignore */
+        } catch (Exception _) { /* ignore */
         }
 
         try {
             database.setDatabaseProductVersion(databaseMetaData.getDatabaseProductVersion());
-        } catch (Exception e) { /* ignore */
+        } catch (Exception _) { /* ignore */
         }
 
         try {
             database.setDatabaseMajorVersion(databaseMetaData.getDatabaseMajorVersion());
-        } catch (Exception e) { /* ignore */
+        } catch (Exception _) { /* ignore */
         }
 
         try {
             database.setDatabaseMinorVersion(databaseMetaData.getDatabaseMinorVersion());
-        } catch (Exception e) { /* ignore */
+        } catch (Exception _) { /* ignore */
         }
 
         // driver
         try {
             database.setDriverName(databaseMetaData.getDriverName());
-        } catch (Exception e) { /* ignore */
+        } catch (Exception _) { /* ignore */
         }
 
         try {
             database.setDriverVersion(databaseMetaData.getDriverVersion());
-        } catch (Exception e) { /* ignore */
+        } catch (Exception _) { /* ignore */
         }
 
         try {
             database.setDriverMajorVersion(databaseMetaData.getDriverMajorVersion());
-        } catch (Exception e) { /* ignore */
+        } catch (Exception _) { /* ignore */
         }
 
         try {
             database.setDriverMinorVersion(databaseMetaData.getDriverMinorVersion());
-        } catch (Exception e) { /* ignore */
+        } catch (Exception _) { /* ignore */
         }
 
         return database;
@@ -339,39 +336,40 @@ public class MetadataExtractor {
 
         log.info("Working with " + tableNamePatterns.size() +  " table name pattern(s)");
 
+        String[] tableTypes = getTableTypesAsStringArray(configuration.getTableTypes());
+        String tableTypeNames = String.join(",", tableTypes);
         for (String tableNamePattern : tableNamePatterns) {
-
             if (log.isInfoEnabled()) {
-                log.info("Loading with catalog=[" + configuration.getCatalog() + "] schemaPattern=[" + configuration.getSchemaName() + "] tableNamePattern=["
-                    + tableNamePattern + "] types=[" + Joiner.on(",").join(configuration.getTableTypes()) + "]");
+                log.info("Loading with catalog=[" + configuration.getCatalog() + "] schemaPattern=[" + configuration.getSchemaName()
+                        + "] tableNamePattern=[" + tableNamePattern + "] types=[" + tableTypeNames + "]");
             }
-            ResultSet resultSet = databaseMetaData.getTables(configuration.getCatalog(), configuration.getSchemaName(),tableNamePattern, getTableTypesAsStringArray(configuration.getTableTypes()));
-            ResultSetWrapper rsw = new ResultSetTables(resultSet, useLabel);
-
-            while (resultSet.next()) {
-                Table table = new Table();
-
-                table.setCatalog(getString(rsw, "TABLE_CAT"));
-                table.setSchemaName(getString(rsw, "TABLE_SCHEM"));
-                table.setName(getString(rsw, "TABLE_NAME"));
-                table.setType(TableType.valueOf(getString(rsw, "TABLE_TYPE")));
-                String remarks = getString(rsw, "REMARKS");
-                if (notEmpty(remarks)) {
-                    table.setRemarks(remarks);
-                }
-
-                if (!skipTable(table)) {
-                    if (log.isInfoEnabled()) {
-                        log.info("Table reversed: " + table.getName());
+            try (ResultSet resultSet = databaseMetaData.getTables(configuration.getCatalog(), configuration.getSchemaName(),
+                    tableNamePattern, tableTypes)) {
+                ResultSetWrapper rsw = new ResultSetTables(resultSet, useLabel);
+                while (resultSet.next()) {
+                    Table table = readTable(rsw);
+                    if (skipTable(table)) {
+                        log.info("Table ignored: {}", table.getName());
+                        continue;
                     }
+                    log.info("Table reversed: {}", table.getName());
                     metaData.add(table);
-                } else {
-                    if (log.isInfoEnabled()) {
-                        log.info("Table ignored : " + table.getName());
-                    }
                 }
             }
         }
+    }
+
+    private Table readTable(ResultSetWrapper row) throws SQLException {
+        Table table = new Table();
+        table.setCatalog(getString(row, "TABLE_CAT"));
+        table.setSchemaName(getString(row, "TABLE_SCHEM"));
+        table.setName(getString(row, "TABLE_NAME"));
+        table.setType(TableType.valueOf(getString(row, "TABLE_TYPE")));
+        String remarks = getString(row, "REMARKS");
+        if (notEmpty(remarks)) {
+            table.setRemarks(remarks);
+        }
+        return table;
     }
 
     private String[] getTableTypesAsStringArray(List<TableType> tableTypes) {
@@ -387,14 +385,7 @@ public class MetadataExtractor {
     }
 
     private boolean isNullable(int nullable) {
-        switch (nullable) {
-            case DatabaseMetaData.columnNoNulls:
-                return false;
-            case DatabaseMetaData.columnNullableUnknown:
-            case DatabaseMetaData.columnNullable:
-            default:
-                return true;
-        }
+        return nullable != DatabaseMetaData.columnNoNulls;
     }
 
     private boolean skipTable(Table table) {

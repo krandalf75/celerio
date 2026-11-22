@@ -59,10 +59,12 @@ public enum MethodConvention {
         return stripToEmpty(prefix) + name + stripToEmpty(suffix);
     }
 
+    @SuppressWarnings("java:S3066") // Configuration overrides can customize this naming convention.
     public void setPrefix(String prefix) {
         this.prefix = stripToNull(prefix);
     }
 
+    @SuppressWarnings("java:S3066") // Configuration overrides can customize this naming convention.
     public void setSuffix(String suffix) {
         this.suffix = stripToNull(suffix);
     }

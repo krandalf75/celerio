@@ -32,6 +32,7 @@ public class NoPrimaryKey implements PrimaryKey {
     private final Entity entity;
     private final List<Attribute> attributes = unmodifiableList(new ArrayList<Attribute>());
 
+    @SuppressWarnings("java:S6832") // The model creates this helper directly for each entity or attribute.
     public NoPrimaryKey(Entity entity) {
         Assert.notNull(entity);
         this.entity = entity;
@@ -53,7 +54,7 @@ public class NoPrimaryKey implements PrimaryKey {
     }
 
     @Override
-    final public boolean isJavaBaseClass() {
+    public final boolean isJavaBaseClass() {
         return false;
     }
 
@@ -68,12 +69,12 @@ public class NoPrimaryKey implements PrimaryKey {
     }
 
     @Override
-    final public boolean isDate() {
+    public final boolean isDate() {
         return false;
     }
 
     @Override
-    final public boolean isEnum() {
+    public final boolean isEnum() {
         return false;
     }
 

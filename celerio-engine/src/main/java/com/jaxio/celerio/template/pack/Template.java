@@ -23,9 +23,9 @@ import java.io.UnsupportedEncodingException;
 
 @Getter
 public class Template {
-    private String name;
-    private TemplatePackInfo templatePackInfo;
-    private byte[] bytes;
+    private final String name;
+    private final TemplatePackInfo templatePackInfo;
+    private final byte[] bytes;
 
     public Template(String name, TemplatePackInfo templatePackInfo, byte[] bytes) {
         this.name = name;

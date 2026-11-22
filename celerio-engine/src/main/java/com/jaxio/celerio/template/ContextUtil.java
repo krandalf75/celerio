@@ -20,6 +20,9 @@ import java.util.Map;
 
 class ContextUtil {
 
+    private ContextUtil() {
+    }
+
     public static void addEnumValues(Map<String, Object> context, Enum<?>[] enumValues) {
         for (Enum<?> enumValue : enumValues) {
             String key = enumValue.name();
@@ -33,8 +36,7 @@ class ContextUtil {
     @SuppressWarnings("rawtypes")
     public static void throwEnumConflictException(Map<String, Object> context, Enum enumValue, String key) {
         Object existingObject = context.get(key);
-        if (existingObject instanceof Enum) {
-            Enum existingEnum = (Enum) existingObject;
+        if (existingObject instanceof Enum<?> existingEnum) {
             throw new IllegalStateException("Ambiguity found in enums, " + enumValue.getClass().getName() + "." + enumValue.name() + " vs "
                     + existingEnum.getClass().getName() + "." + existingEnum);
         } else {

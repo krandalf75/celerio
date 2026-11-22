@@ -23,8 +23,12 @@ import org.springframework.stereotype.Service;
 @Service
 public class OutputResultFactory {
 
+    private final FileTracker fileTracker;
+
     @Autowired
-    FileTracker fileTracker;
+    public OutputResultFactory(FileTracker fileTracker) {
+        this.fileTracker = fileTracker;
+    }
 
     public OutputResult getOutputResult(String userBaseDirectory, String outputDirectory) {
         if (FilenameUtils.isExtension(outputDirectory, new String[]{"zip", "jar"})) {

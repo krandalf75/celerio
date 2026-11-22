@@ -77,14 +77,14 @@ public enum JdbcType {
     NULL(Types.NULL), //
     SQLXML(Types.SQLXML);
 
-    private final int jdbcType;
+    private final int typeCode;
 
     JdbcType(int jdbcType) {
-        this.jdbcType = jdbcType;
+        this.typeCode = jdbcType;
     }
 
     public int getJdbcType() {
-        return jdbcType;
+        return typeCode;
     }
 
     public String getName() {
@@ -118,15 +118,8 @@ public enum JdbcType {
     }
 
     public boolean isString() {
-        switch (jdbcType) {
-            case Types.VARCHAR:
-            case Types.LONGVARCHAR:
-            case Types.CLOB:
-            case Types.LONGNVARCHAR:
-            case Types.NCHAR:
-            case Types.NCLOB:
-            case Types.NVARCHAR:
-            case Types.SQLXML:
+        switch (typeCode) {
+            case Types.VARCHAR, Types.LONGVARCHAR, Types.CLOB, Types.LONGNVARCHAR, Types.NCHAR, Types.NCLOB, Types.NVARCHAR, Types.SQLXML:
                 return true;
             default:
                 return false;
@@ -140,26 +133,12 @@ public enum JdbcType {
     }
 
     private boolean isChar() {
-        switch (jdbcType) {
-            case Types.CHAR:
-                return true;
-            default:
-                return false;
-        }
+        return typeCode == Types.CHAR;
     }
 
     public boolean isNumeric() {
-        switch (jdbcType) {
-            case Types.BIGINT:
-            case Types.DECIMAL:
-            case Types.DOUBLE:
-            case Types.FLOAT:
-            case Types.INTEGER:
-            case Types.NUMERIC:
-            case Types.REAL:
-            case Types.SMALLINT:
-            case Types.TINYINT:
-            case Types.ROWID:
+        switch (typeCode) {
+            case Types.BIGINT, Types.DECIMAL, Types.DOUBLE, Types.FLOAT, Types.INTEGER, Types.NUMERIC, Types.REAL, Types.SMALLINT, Types.TINYINT, Types.ROWID:
                 return true;
             default:
                 return false;
@@ -167,10 +146,8 @@ public enum JdbcType {
     }
 
     public boolean isTemporal() {
-        switch (jdbcType) {
-            case Types.DATE:
-            case Types.TIMESTAMP:
-            case Types.TIME:
+        switch (typeCode) {
+            case Types.DATE, Types.TIMESTAMP, Types.TIME:
                 return true;
             default:
                 return false;

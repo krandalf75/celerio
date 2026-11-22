@@ -17,8 +17,6 @@
 package com.jaxio.celerio.model;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.jaxio.celerio.Config;
 import com.jaxio.celerio.configuration.Module;
 import com.jaxio.celerio.configuration.convention.CollectionType;
@@ -56,6 +54,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import static com.google.common.base.Predicates.and;
 import static com.google.common.collect.Iterables.any;
@@ -85,10 +84,8 @@ import static org.springframework.beans.factory.config.BeanDefinition.SCOPE_PROT
 @Slf4j
 @Getter
 public class Entity implements Hierarchical<Entity>, Named, Map<String, Object> {
-    @Autowired
-    private Config config;
-    @Autowired
-    private RelationCollisionUtil collisionUtil;
+    private final Config config;
+    private final RelationCollisionUtil collisionUtil;
     @Setter
     private boolean virtual;
     @Setter
@@ -114,154 +111,154 @@ public class Entity implements Hierarchical<Entity>, Named, Map<String, Object> 
     // -----------------------------------
 
     // Used from velocity templates
-    private Namer model = newClassNamer(ClassType.model);
-    private Namer controllerWithPathVariable = newClassNamer(ClassType.controllerWithPathVariable);
-    private Namer dao = newClassNamer(ClassType.dao);
-    private Namer converter = newClassNamer(ClassType.converter);
-    private Namer formatter = newClassNamer(ClassType.formatter);
-    private Namer formService = newClassNamer(ClassType.formService);
-    private Namer validator = newClassNamer(ClassType.validator);
-    private Namer formValidator = newClassNamer(ClassType.formValidator);
-    private Namer repository = newClassNamer(ClassType.repository);
-    private Namer repositorySupport = newClassNamer(ClassType.repositorySupport);
+    private final Namer model = newClassNamer(ClassType.model);
+    private final Namer controllerWithPathVariable = newClassNamer(ClassType.controllerWithPathVariable);
+    private final Namer dao = newClassNamer(ClassType.dao);
+    private final Namer converter = newClassNamer(ClassType.converter);
+    private final Namer formatter = newClassNamer(ClassType.formatter);
+    private final Namer formService = newClassNamer(ClassType.formService);
+    private final Namer validator = newClassNamer(ClassType.validator);
+    private final Namer formValidator = newClassNamer(ClassType.formValidator);
+    private final Namer repository = newClassNamer(ClassType.repository);
+    private final Namer repositorySupport = newClassNamer(ClassType.repositorySupport);
     // service is like repository... just a matter of taste.
-    private Namer service = newClassNamer(ClassType.service);
-    private Namer serviceImpl = newClassNamer(ClassType.serviceImpl);
-    private Namer serviceSupport = newClassNamer(ClassType.serviceSupport);
-    private Namer entityForm = newClassNamer(ClassType.entityForm);
-    private Namer context = newClassNamer(ClassType.context);
-    private Namer modelGenerator = newClassNamer(ClassType.modelGenerator);
-    private Namer searchController = newClassNamer(ClassType.searchController);
-    private Namer webSupport = newClassNamer(ClassType.webSupport);
-    private Namer webModel = newClassNamer(ClassType.webModel);
-    private Namer webModelConverter = newClassNamer(ClassType.webModelConverter);
-    private Namer webModelItems = newClassNamer(ClassType.webModelItems);
-    private Namer webPermission = newClassNamer(ClassType.webPermission);
-    private Namer seleniumEditPage = new DomainSubpackageClassNamer(this, ClassType.seleniumEditPage);
-    private Namer seleniumSearchPage = new DomainSubpackageClassNamer(this, ClassType.seleniumSearchPage);
-    private Namer printer = newClassNamer(ClassType.printer);
+    private final Namer service = newClassNamer(ClassType.service);
+    private final Namer serviceImpl = newClassNamer(ClassType.serviceImpl);
+    private final Namer serviceSupport = newClassNamer(ClassType.serviceSupport);
+    private final Namer entityForm = newClassNamer(ClassType.entityForm);
+    private final Namer context = newClassNamer(ClassType.context);
+    private final Namer modelGenerator = newClassNamer(ClassType.modelGenerator);
+    private final Namer searchController = newClassNamer(ClassType.searchController);
+    private final Namer webSupport = newClassNamer(ClassType.webSupport);
+    private final Namer webModel = newClassNamer(ClassType.webModel);
+    private final Namer webModelConverter = newClassNamer(ClassType.webModelConverter);
+    private final Namer webModelItems = newClassNamer(ClassType.webModelItems);
+    private final Namer webPermission = newClassNamer(ClassType.webPermission);
+    private final Namer seleniumEditPage = new DomainSubpackageClassNamer(this, ClassType.seleniumEditPage);
+    private final Namer seleniumSearchPage = new DomainSubpackageClassNamer(this, ClassType.seleniumSearchPage);
+    private final Namer printer = newClassNamer(ClassType.printer);
 
     @Setter
     private PrimaryKey primaryKey;
 
     // base attributes, the getters return unmodifiableList to make sure we go through the instance to manipulate them
-    private List<Entity> children = newArrayList();
-    private List<Attribute> currentAttributes = newArrayList();
-    private Map<String, Attribute> currentAttributesByColumnFullName = newHashMap();
-    private Map<String, Attribute> currentAttributesByName = newHashMap();
+    private final List<Entity> children = newArrayList();
+    private final List<Attribute> currentAttributes = newArrayList();
+    private final Map<String, Attribute> currentAttributesByColumnFullName = newHashMap();
+    private final Map<String, Attribute> currentAttributesByName = newHashMap();
 
     // -----------------------------------
     // Unique
     // -----------------------------------
-    private List<Unique> currentUniques = newArrayList();
-    private EntityUniques uniques = newEntityUniques();
-    private EntityUniques simpleUniques = newEntityUniques(SIMPLE_UNIQUE);
-    private EntityUniques compositeUniques = newEntityUniques(COMPOSITE_UNIQUE);
+    private final List<Unique> currentUniques = newArrayList();
+    private final EntityUniques uniques = newEntityUniques();
+    private final EntityUniques simpleUniques = newEntityUniques(SIMPLE_UNIQUE::apply);
+    private final EntityUniques compositeUniques = newEntityUniques(COMPOSITE_UNIQUE::apply);
 
     // -----------------------------------
     // Relations
     // -----------------------------------
-    private List<Relation> currentRelations = newArrayList();
-    private EntityRelations relations = newEntityRelations();
-    private EntityRelations relationsExceptNN = newEntityRelations(NOT_MANY_TO_MANY);
-    private EntityRelations collectionRelations = newEntityRelations(COLLECTION);
-    private EntityRelations oneToMany = newEntityRelations(ONE_TO_MANY);
-    private EntityRelations oneToVirtualOne = newEntityRelations(ONE_TO_VIRTUAL_ONE);
-    private EntityRelations manyToOne = newEntityRelations(MANY_TO_ONE);
-    private EntityRelations xToOne = newEntityRelations(X_TO_ONE);
-    private EntityRelations forwardXToOne = newEntityRelations(FORWARD_X_TO_ONE);
-    private EntityRelations nonSimpleXToOne = newEntityRelations(NON_SIMPLE_X_TO_ONE);
-    private EntityRelations compositeXToOne = newEntityRelations(COMPOSITE_X_TO_ONE);
-    private EntityRelations unidirectionalXToOne = newEntityRelations(UNIDIRECTIONAL_X_TO_ONE);
-    private EntityRelations bidirectionalXToOne = newEntityRelations(BIDIRECTIONAL_X_TO_ONE);
-    private EntityRelations intermediateXToOne = newEntityRelations(INTERMEDIATE_X_TO_ONE);
-    private EntityRelations oneToOne = newEntityRelations(ONE_TO_ONE);
-    private EntityRelations inverseOneToOne = newEntityRelations(SIMPLE_INVERSE_ONE_TO_ONE);
-    private EntityRelations manyToMany = newEntityRelations(MANY_TO_MANY);
-    private EntityRelations unidirectionalManyToMany = newEntityRelations(UNIDIRECTIONAL_MANY_TO_MANY);
-    private EntityRelations bidirectionalManyToMany = newEntityRelations(BIDIRECTIONAL_MANY_TO_MANY);
-    private EntityRelations xToMany = newEntityRelations(X_TO_MANY);
-    private EntityRelations composite = newEntityRelations(COMPOSITE);
-    private EntityRelations simpleRelations = newEntityRelations(RelationPredicates.SIMPLE);
-    private EntityRelations inverseRelations = newEntityRelations(RELATION_IS_INVERSE);
-    private EntityRelations formInputFieldRelations = newEntityRelations(FORM_INPUT_FIELD_RELATION);
+    private final List<Relation> currentRelations = newArrayList();
+    private final EntityRelations relations = newEntityRelations();
+    private final EntityRelations relationsExceptNN = newEntityRelations(NOT_MANY_TO_MANY::apply);
+    private final EntityRelations collectionRelations = newEntityRelations(COLLECTION::apply);
+    private final EntityRelations oneToMany = newEntityRelations(ONE_TO_MANY::apply);
+    private final EntityRelations oneToVirtualOne = newEntityRelations(ONE_TO_VIRTUAL_ONE::apply);
+    private final EntityRelations manyToOne = newEntityRelations(MANY_TO_ONE::apply);
+    private final EntityRelations xToOne = newEntityRelations(X_TO_ONE::apply);
+    private final EntityRelations forwardXToOne = newEntityRelations(FORWARD_X_TO_ONE::apply);
+    private final EntityRelations nonSimpleXToOne = newEntityRelations(NON_SIMPLE_X_TO_ONE::apply);
+    private final EntityRelations compositeXToOne = newEntityRelations(COMPOSITE_X_TO_ONE::apply);
+    private final EntityRelations unidirectionalXToOne = newEntityRelations(UNIDIRECTIONAL_X_TO_ONE::apply);
+    private final EntityRelations bidirectionalXToOne = newEntityRelations(BIDIRECTIONAL_X_TO_ONE::apply);
+    private final EntityRelations intermediateXToOne = newEntityRelations(INTERMEDIATE_X_TO_ONE::apply);
+    private final EntityRelations oneToOne = newEntityRelations(ONE_TO_ONE::apply);
+    private final EntityRelations inverseOneToOne = newEntityRelations(SIMPLE_INVERSE_ONE_TO_ONE::apply);
+    private final EntityRelations manyToMany = newEntityRelations(MANY_TO_MANY::apply);
+    private final EntityRelations unidirectionalManyToMany = newEntityRelations(UNIDIRECTIONAL_MANY_TO_MANY::apply);
+    private final EntityRelations bidirectionalManyToMany = newEntityRelations(BIDIRECTIONAL_MANY_TO_MANY::apply);
+    private final EntityRelations xToMany = newEntityRelations(X_TO_MANY::apply);
+    private final EntityRelations composite = newEntityRelations(COMPOSITE::apply);
+    private final EntityRelations simpleRelations = newEntityRelations(RelationPredicates.SIMPLE::apply);
+    private final EntityRelations inverseRelations = newEntityRelations(RELATION_IS_INVERSE::apply);
+    private final EntityRelations formInputFieldRelations = newEntityRelations(FORM_INPUT_FIELD_RELATION::apply);
 
     // -----------------------------------
     // Hierarchy
     // -----------------------------------
-    private HierarchicalSupport<Entity> hierarchicalSupport = new HierarchicalSupport<Entity>(this);
-    private CurrentAndFlatListHolder<Entity, Entity> hierarchy = new CurrentAndFlatListHolder<Entity, Entity>(this, HIERARCHY_ATTRIBUTES);
+    private final HierarchicalSupport<Entity> hierarchicalSupport = new HierarchicalSupport<Entity>(this);
+    private final CurrentAndFlatListHolder<Entity, Entity> hierarchy = new CurrentAndFlatListHolder<Entity, Entity>(this, HIERARCHY_ATTRIBUTES);
 
     // -----------------------------------
     // Attributes
     // -----------------------------------
-    private EntityAttributes attributes = newEntityAttributes();
-    private EntityAttributes allAttributes = new EntityAttributes(this, ATTRIBUTES_AND_PK_ATTRIBUTES);
+    private final EntityAttributes attributes = newEntityAttributes();
+    private final EntityAttributes allAttributes = new EntityAttributes(this, ATTRIBUTES_AND_PK_ATTRIBUTES);
 
     // pk
-    private EntityAttributes primaryKeyAttributes = new EntityAttributes(this, PK_ATTRIBUTES);
-    private EntityAttributes nonCpkAttributes = newEntityAttributes(NOT_IN_COMPOSITE_PK);
-    private EntityAttributes inPkAttributes = newEntityAttributes(IN_PK);
-    private EntityAttributes simplePkAttributes = newEntityAttributes(SIMPLE_PK);
-    private EntityAttributes notInPkAttributes = newEntityAttributes(NOT_IN_PK);
-    private EntityAttributes cpkDateAttributes = new EntityAttributes(this, CPK_ATTRIBUTES, DATE);
-    private EntityAttributes businessKeyByConfiguration = newEntityAttributes(BUSINESS_KEY_BY_CONFIGURATION);
+    private final EntityAttributes primaryKeyAttributes = new EntityAttributes(this, PK_ATTRIBUTES);
+    private final EntityAttributes nonCpkAttributes = newEntityAttributes(NOT_IN_COMPOSITE_PK::apply);
+    private final EntityAttributes inPkAttributes = newEntityAttributes(IN_PK::apply);
+    private final EntityAttributes simplePkAttributes = newEntityAttributes(SIMPLE_PK::apply);
+    private final EntityAttributes notInPkAttributes = newEntityAttributes(NOT_IN_PK::apply);
+    private final EntityAttributes cpkDateAttributes = new EntityAttributes(this, CPK_ATTRIBUTES, DATE);
+    private final EntityAttributes businessKeyByConfiguration = newEntityAttributes(BUSINESS_KEY_BY_CONFIGURATION::apply);
 
     @Setter
     private List<Attribute> businessKey = newArrayList(); // set by BusinessKeyFactory.
 
     // fk
-    private EntityAttributes inFkAttributes = newEntityAttributes(IN_FK);
-    private EntityAttributes simpleFkAttributes = newEntityAttributes(SIMPLE_FK);
+    private final EntityAttributes inFkAttributes = newEntityAttributes(IN_FK::apply);
+    private final EntityAttributes simpleFkAttributes = newEntityAttributes(SIMPLE_FK::apply);
 
     // misc
-    private EntityAttributes simpleAttributes = newEntityAttributes(SIMPLE);
-    private EntityAttributes simpleStringAttributes = newEntityAttributes(SIMPLE, STRING);
-    private EntityAttributes uniqueAttributes = newEntityAttributes(IS_UNIQUE, NOT_SIMPLE_PK, WITH_PUBLIC_SETTER_ACCESSIBILITY);
-    private EntityAttributes dateAttributes = newEntityAttributes(DATE, NOT_VERSION);
-    private EntityAttributes anyDateAttributes = newEntityAttributes(DATE);
-    private EntityAttributes fileAttributes = newEntityAttributes(FILE);
-    private EntityAttributes numericAttributes = newEntityAttributes(NUMERIC);
-    private EntityAttributes localeKeyAttributes = newEntityAttributes(LOCALE_KEY);
-    private EntityAttributes localizableAttributes = newEntityAttributes(LOCALIZABLE);
-    private EntityAttributes enumAttributes = newEntityAttributes(ENUM);
-    private EntityAttributes uniqueEnumAttributes = newEntityAttributes(ENUM, IS_UNIQUE);
-    private EntityAttributes pertinentDefaultValueAttributes = newEntityAttributes(HAS_PERTINENT_DEFAULT_VALUE);
-    private EntityAttributes labelAttributes = newEntityAttributes(IS_LABEL);
-    private EntityAttributes printerAttributes = new EntityAttributes(this, PRINTER_ATTRIBUTES);
-    private EntityAttributes stringPrinterAttributes = new EntityAttributes(this, STRING_PRINTER_ATTRIBUTES);
-    private EntityAttributes indexedPrinterAttributes = new EntityAttributes(this, INDEXED_PRINTER_ATTRIBUTES);
-    private EntityAttributes localizableDisplayStringAttributes = new EntityAttributes(this, LOCALIZABLE_TO_DISPLAY_STRING_ATTRIBUTES);
-    private EntityAttributes versionAttributes = newEntityAttributes(VERSION);
+    private final EntityAttributes simpleAttributes = newEntityAttributes(SIMPLE::apply);
+    private final EntityAttributes simpleStringAttributes = newEntityAttributes(SIMPLE::apply, STRING::apply);
+    private final EntityAttributes uniqueAttributes = newEntityAttributes(IS_UNIQUE::apply, NOT_SIMPLE_PK::apply, WITH_PUBLIC_SETTER_ACCESSIBILITY::apply);
+    private final EntityAttributes dateAttributes = newEntityAttributes(DATE::apply, NOT_VERSION::apply);
+    private final EntityAttributes anyDateAttributes = newEntityAttributes(DATE::apply);
+    private final EntityAttributes fileAttributes = newEntityAttributes(FILE::apply);
+    private final EntityAttributes numericAttributes = newEntityAttributes(NUMERIC::apply);
+    private final EntityAttributes localeKeyAttributes = newEntityAttributes(LOCALE_KEY::apply);
+    private final EntityAttributes localizableAttributes = newEntityAttributes(LOCALIZABLE::apply);
+    private final EntityAttributes enumAttributes = newEntityAttributes(ENUM::apply);
+    private final EntityAttributes uniqueEnumAttributes = newEntityAttributes(ENUM::apply, IS_UNIQUE::apply);
+    private final EntityAttributes pertinentDefaultValueAttributes = newEntityAttributes(HAS_PERTINENT_DEFAULT_VALUE::apply);
+    private final EntityAttributes labelAttributes = newEntityAttributes(IS_LABEL::apply);
+    private final EntityAttributes printerAttributes = new EntityAttributes(this, PRINTER_ATTRIBUTES);
+    private final EntityAttributes stringPrinterAttributes = new EntityAttributes(this, STRING_PRINTER_ATTRIBUTES);
+    private final EntityAttributes indexedPrinterAttributes = new EntityAttributes(this, INDEXED_PRINTER_ATTRIBUTES);
+    private final EntityAttributes localizableDisplayStringAttributes = new EntityAttributes(this, LOCALIZABLE_TO_DISPLAY_STRING_ATTRIBUTES);
+    private final EntityAttributes versionAttributes = newEntityAttributes(VERSION::apply);
 
     // search
-    private EntityAttributes searchAttributes = newEntityAttributes(SEARCH_FIELD, AttributeOrder.SEARCH_FIELD);
-    private EntityAttributes rangeableSearchAttributes = newEntityAttributes(SEARCH_FIELD, RANGEABLE_FIELD, AttributeOrder.SEARCH_FIELD);
-    private EntityAttributes multiSelectableSearchAttributes = newEntityAttributes(SEARCH_FIELD, MULTI_SELECTABLE_FIELD, AttributeOrder.SEARCH_FIELD);
-    private EntityAttributes hibernateSearchAttributes = newEntityAttributes(HIBERNATE_SEARCH_FIELD);
+    private final EntityAttributes searchAttributes = newEntityAttributes(SEARCH_FIELD::apply, AttributeOrder.SEARCH_FIELD);
+    private final EntityAttributes rangeableSearchAttributes = newEntityAttributes(SEARCH_FIELD::apply, RANGEABLE_FIELD::apply, AttributeOrder.SEARCH_FIELD);
+    private final EntityAttributes multiSelectableSearchAttributes = newEntityAttributes(SEARCH_FIELD::apply, MULTI_SELECTABLE_FIELD::apply, AttributeOrder.SEARCH_FIELD);
+    private final EntityAttributes hibernateSearchAttributes = newEntityAttributes(HIBERNATE_SEARCH_FIELD::apply);
 
-    private EntityAttributes searchResultAttributesConvention = newEntityAttributes(SEARCH_RESULT_CONVENTION, AttributeOrder.SEARCH_RESULT);
-    private EntityAttributes searchResultAttributesManual = newEntityAttributes(SEARCH_RESULT_FIELD_DEFINED_MANUALLY, AttributeOrder.SEARCH_RESULT);
-    private EntityAttributes searchResultAttributes = new EntityAttributes(this, SEARCH_RESULTS, AttributeOrder.SEARCH_RESULT);
+    private final EntityAttributes searchResultAttributesConvention = newEntityAttributes(SEARCH_RESULT_CONVENTION::apply, AttributeOrder.SEARCH_RESULT);
+    private final EntityAttributes searchResultAttributesManual = newEntityAttributes(SEARCH_RESULT_FIELD_DEFINED_MANUALLY::apply, AttributeOrder.SEARCH_RESULT);
+    private final EntityAttributes searchResultAttributes = new EntityAttributes(this, SEARCH_RESULTS, AttributeOrder.SEARCH_RESULT);
 
-    private EntityAttributes patternSearchableAttributes = newEntityAttributes(IS_PATTERN_SEARCHABLE);
-    private EntityAttributes patternSearchableCpkAttributes = new EntityAttributes(this, CPK_ATTRIBUTES, IS_CPK_PATTERN_SEARCHABLE);
-    private EntityAttributes withPublicSetterAccessibilityAttributes = newEntityAttributes(WITH_PUBLIC_SETTER_ACCESSIBILITY);
+    private final EntityAttributes patternSearchableAttributes = newEntityAttributes(IS_PATTERN_SEARCHABLE::apply);
+    private final EntityAttributes patternSearchableCpkAttributes = new EntityAttributes(this, CPK_ATTRIBUTES, IS_CPK_PATTERN_SEARCHABLE);
+    private final EntityAttributes withPublicSetterAccessibilityAttributes = newEntityAttributes(WITH_PUBLIC_SETTER_ACCESSIBILITY::apply);
 
     // web
-    private EntityAttributes visibleAttributes = newEntityAttributes(VISIBLE);
-    private EntityAttributes sortableAttributes = newEntityAttributes(SORTABLE);
-    private EntityAttributes defaultSortAttributes = newEntityAttributes(DEFAULT_SORT);
+    private final EntityAttributes visibleAttributes = newEntityAttributes(VISIBLE::apply);
+    private final EntityAttributes sortableAttributes = newEntityAttributes(SORTABLE::apply);
+    private final EntityAttributes defaultSortAttributes = newEntityAttributes(DEFAULT_SORT::apply);
 
-    private EntityAttributes formAttributes = newEntityAttributes(FORM_FIELD, AttributeOrder.FORM_FIELD);
-    private EntityAttributes visibleFormAttributes = newEntityAttributes(FORM_FIELD, VISIBLE, AttributeOrder.FORM_FIELD);
-    private EntityAttributes hiddenFormAttributes = newEntityAttributes(FORM_FIELD, HIDDEN, AttributeOrder.FORM_FIELD);
+    private final EntityAttributes formAttributes = newEntityAttributes(FORM_FIELD::apply, AttributeOrder.FORM_FIELD);
+    private final EntityAttributes visibleFormAttributes = newEntityAttributes(FORM_FIELD::apply, VISIBLE::apply, AttributeOrder.FORM_FIELD);
+    private final EntityAttributes hiddenFormAttributes = newEntityAttributes(FORM_FIELD::apply, HIDDEN::apply, AttributeOrder.FORM_FIELD);
 
     // -----------------------------------
     // Entities
     // -----------------------------------    
-    private EntityEntity meAndRelatedEntities = newEntityEntity();
-    private EntityEntity relatedEntities = newEntityEntity(new ExcludeEntity(this));
+    private final EntityEntity meAndRelatedEntities = newEntityEntity();
+    private final EntityEntity relatedEntities = newEntityEntity(new ExcludeEntity(this)::apply);
 
     public void setEntityConfig(EntityConfig config) {
         Assert.isNull(this.entityConfig, "entityConfig can be set only once");
@@ -280,18 +277,17 @@ public class Entity implements Hierarchical<Entity>, Named, Map<String, Object> 
     }
 
     public boolean hasChildren() {
-        return children.size() > 0;
+        return !children.isEmpty();
     }
 
     public String getParentsTrainAndSelf() {
-        String result = "";
+        StringBuilder result = new StringBuilder();
         if (hasParent()) {
             for (Entity e : getParents()) {
-                result = result + e.getName() + ":";
+                result.append(e.getName()).append(':');
             }
         }
-
-        return result + getName();
+        return result.append(getName()).toString();
     }
 
     public void addAttribute(Attribute attribute) {
@@ -316,6 +312,16 @@ public class Entity implements Hierarchical<Entity>, Named, Map<String, Object> 
 
     public void addChild(Entity child) {
         children.add(child);
+    }
+
+    public Entity() {
+        this(null, null);
+    }
+
+    @Autowired
+    public Entity(Config config, RelationCollisionUtil collisionUtil) {
+        this.config = config;
+        this.collisionUtil = collisionUtil;
     }
 
     public void addUnique(Unique unique) {
@@ -484,92 +490,38 @@ public class Entity implements Hierarchical<Entity>, Named, Map<String, Object> 
 
     public List<Attribute> printerAttributes() {
         List<Attribute> result = newArrayList();
-
-        // configuration has priority:
-        for (Attribute a : attributes.getList()) {
-            if (a.getColumnConfig().getSelectLabel() != null && a.getColumnConfig().getSelectLabel()) {
-                result.add(a);
-            }
-        }
-
-        // then business key...
+        attributes.getList().stream().filter(attribute -> Boolean.TRUE.equals(attribute.getColumnConfig().getSelectLabel()))
+                .forEach(result::add);
         if (result.isEmpty() && useBusinessKey()) {
-            for (Attribute a : getBusinessKey()) {
-                if (!a.isPassword()) {
-                    if (a.isSimple()) {
-                        result.add(a);
-                    }
-                }
-            }
+            getBusinessKey().stream().filter(attribute -> !attribute.isPassword() && attribute.isSimple()).forEach(result::add);
         }
-
-        // attempt to use naming convention
-        if (result.isEmpty() || result.size() < 2) {
-            for (Attribute a : labelAttributes.getList()) {
-                if (!a.isPassword()) {
-                    result.add(a);
-                    if (result.size() > 2) {
-                        break;
-                    }
-                }
-            }
+        if (result.size() < 2) {
+            labelAttributes.getList().stream().filter(attribute -> !attribute.isPassword()).limit(3L - result.size())
+                    .forEach(result::add);
         }
-
-        // attempt get first 3 unique columns
         if (result.isEmpty()) {
-            for (Attribute a : simpleAttributes.getList()) {
-                if (a.isUnique() && !a.isPassword()) {
-                    result.add(a);
-                    if (result.size() > 2) {
-                        break;
-                    }
-                }
-            }
+            result.addAll(defaultPrinterAttributes());
         }
-
-        // attempt get first 3 non nullable string column not part of file (expect filename which interest us)
-        if (result.isEmpty()) {
-            for (Attribute a : simpleAttributes.getList()) {
-                if (a.isString() && a.isNotNullable()) {
-                    if (!a.isInFileDefinition() || a.isFilename()) {
-                        result.add(a);
-                        if (result.size() > 2) {
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        // attempt get first 3 string column
-        if (result.isEmpty()) {
-            for (Attribute a : simpleAttributes.getList()) {
-                if ((a.isString() || a.isFilename()) && !a.isPassword()) {
-                    result.add(a);
-                    if (result.size() > 2) {
-                        break;
-                    }
-                }
-            }
-        }
-
-        // last resort add first 3 attribute
-        if (result.isEmpty()) {
-            for (Attribute a : simpleAttributes.getList()) {
-                if (!a.isPassword()) {
-                    result.add(a);
-                    if (result.size() > 2) {
-                        break;
-                    }
-                }
-            }
-        }
-
         if (result.isEmpty() && hasSimplePk()) {
             result.add(getRoot().getPrimaryKey().getAttribute());
         }
-
         return unmodifiableList(result);
+    }
+
+    private List<Attribute> defaultPrinterAttributes() {
+        List<Attribute> candidates = simpleAttributes.getList();
+        List<Attribute> selection = candidates.stream().filter(attribute -> attribute.isUnique() && !attribute.isPassword()).limit(3).toList();
+        if (!selection.isEmpty()) {
+            return selection;
+        }
+        selection = candidates.stream()
+                .filter(attribute -> attribute.isString() && attribute.isNotNullable() && (!attribute.isInFileDefinition() || attribute.isFilename()))
+                .limit(3).toList();
+        if (!selection.isEmpty()) {
+            return selection;
+        }
+        selection = candidates.stream().filter(attribute -> (attribute.isString() || attribute.isFilename()) && !attribute.isPassword()).limit(3).toList();
+        return selection.isEmpty() ? candidates.stream().filter(attribute -> !attribute.isPassword()).limit(3).toList() : selection;
     }
 
     public List<Attribute> stringPrinterAttributes() {
@@ -752,7 +704,7 @@ public class Entity implements Hierarchical<Entity>, Named, Map<String, Object> 
     // ----------------------------------------
 
     public boolean useBusinessKey() {
-        return businessKey.size() > 0;
+        return !businessKey.isEmpty();
     }
 
     /**
@@ -780,16 +732,9 @@ public class Entity implements Hierarchical<Entity>, Named, Map<String, Object> 
     }
 
     public boolean overrideDeleteInManagerImpl() {
-        if (!isManyToManyJoinEntity() && !isView()) {
-            for (Relation r : relations.getList()) {
-                // TODO: move into Relation
-                if (r.hasInverse() && (r.getInverse().isOneToMany() || r.getInverse().isOneToOne())) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
+        return !isManyToManyJoinEntity() && !isView()
+                && relations.getList().stream().filter(Relation::hasInverse).map(Relation::getInverse)
+                        .anyMatch(inverse -> inverse.isOneToMany() || inverse.isOneToOne());
     }
 
     public boolean is(InheritanceType strategy) {
@@ -807,10 +752,8 @@ public class Entity implements Hierarchical<Entity>, Named, Map<String, Object> 
     public List<Entity> getMandatoryToEntitiesUpToRoot() {
         List<Entity> result = newArrayList();
         for (Relation r : getRelations().getFlatUp().getList()) {
-            if (r.isMandatory()) {
-                if (!result.contains(r.getToEntity())) {
-                    result.add(r.getToEntity());
-                }
+            if (r.isMandatory() && !result.contains(r.getToEntity())) {
+                result.add(r.getToEntity());
             }
         }
         return result;
@@ -867,7 +810,7 @@ public class Entity implements Hierarchical<Entity>, Named, Map<String, Object> 
     // -----------------------------------------------------
 
     @Override
-    final public boolean equals(Object o) {
+    public final boolean equals(Object o) {
         if (o == this) {
             return true;
         }
@@ -877,7 +820,7 @@ public class Entity implements Hierarchical<Entity>, Named, Map<String, Object> 
         }
 
         Entity other = (Entity) o;
-        if (getName() != null && getName().length() > 0) {
+        if (getName() != null && !getName().isEmpty()) {
             return getName().equals(other.getName());
         } else {
             throw new IllegalStateException("equals is called whereas 'name' is not yet set, this is dangerous");
@@ -885,8 +828,8 @@ public class Entity implements Hierarchical<Entity>, Named, Map<String, Object> 
     }
 
     @Override
-    final public int hashCode() {
-        if (getName() != null && getName().length() > 0) {
+    public final int hashCode() {
+        if (getName() != null && !getName().isEmpty()) {
             return getName().hashCode();
         } else {
             throw new IllegalStateException("hashCode is called whereas 'name' is not yet set, this is dangerous");
@@ -902,7 +845,7 @@ public class Entity implements Hierarchical<Entity>, Named, Map<String, Object> 
     }
 
     private EntityUniques newEntityUniques(Predicate<Unique> predicate) {
-        return new EntityUniques(this, UNIQUES, predicate);
+        return new EntityUniques(this, UNIQUES, predicate::test);
     }
 
     private EntityRelations newEntityRelations() {
@@ -910,7 +853,7 @@ public class Entity implements Hierarchical<Entity>, Named, Map<String, Object> 
     }
 
     private EntityRelations newEntityRelations(Predicate<Relation> predicate) {
-        return new EntityRelations(this, RELATIONS, predicate);
+        return new EntityRelations(this, RELATIONS, predicate::test);
     }
 
     private EntityAttributes newEntityAttributes() {
@@ -918,29 +861,24 @@ public class Entity implements Hierarchical<Entity>, Named, Map<String, Object> 
     }
 
     private EntityAttributes newEntityAttributes(Predicate<Attribute> predicate) {
-        return new EntityAttributes(this, ATTRIBUTES, predicate);
+        return new EntityAttributes(this, ATTRIBUTES, predicate::test);
     }
 
     private EntityAttributes newEntityAttributes(Predicate<Attribute> predicate, AttributeOrder attributeOrder) {
-        return new EntityAttributes(this, ATTRIBUTES, predicate, attributeOrder);
+        return new EntityAttributes(this, ATTRIBUTES, predicate::test, attributeOrder);
     }
 
     private EntityAttributes newEntityAttributes(Predicate<Attribute> p1, Predicate<Attribute> p2) {
-        return new EntityAttributes(this, ATTRIBUTES, Predicates.<Attribute>and(p1, p2)); // using static import breaks compilation
+        return newEntityAttributes(p1.and(p2));
     }
 
     private EntityAttributes newEntityAttributes(Predicate<Attribute> p1, Predicate<Attribute> p2, AttributeOrder attributeOrder) {
-        return new EntityAttributes(this, ATTRIBUTES, Predicates.<Attribute>and(p1, p2), attributeOrder); // using static import breaks compilation
+        return newEntityAttributes(p1.and(p2), attributeOrder);
     }
 
-    @SuppressWarnings("unchecked")
     private EntityAttributes newEntityAttributes(Predicate<Attribute> p1, Predicate<Attribute> p2, Predicate<Attribute> p3) {
-        return new EntityAttributes(this, ATTRIBUTES, Predicates.<Attribute>and(p1, p2, p3)); // using static import breaks compilation
+        return newEntityAttributes(p1.and(p2).and(p3));
     }
-
-//    private EntityPackageImports newEntityPackageImports(ListGetter<PackageImport, Entity> listGetter) {
-//        return new EntityPackageImports(this, listGetter);
-//    }
 
     private Namer newClassNamer(ClassType type) {
         return new ClassNamer(this, type);
@@ -955,10 +893,10 @@ public class Entity implements Hierarchical<Entity>, Named, Map<String, Object> 
     }
 
     private EntityEntity newEntityEntity(Predicate<Entity> predicate) {
-        return new EntityEntity(this, RELATED_ENTITIES, predicate);
+        return new EntityEntity(this, RELATED_ENTITIES, predicate::test);
     }
 
-    // FIXME: rapid patch for demo
+    /** Returns descendants of a root entity in depth-first order. */
     public List<Entity> getAllChildrenRecursive() {
         List<Entity> result = newArrayList();
         if (isRoot()) {
@@ -967,7 +905,6 @@ public class Entity implements Hierarchical<Entity>, Named, Map<String, Object> 
         return result;
     }
 
-    // rapid patch
     private void allChildrenRecursive(Entity e, List<Entity> result) {
         for (Entity child : e.getChildren()) {
             result.add(child);
@@ -984,7 +921,7 @@ public class Entity implements Hierarchical<Entity>, Named, Map<String, Object> 
     // from velocity templates as if we had getter.
     // ------------------------------------
 
-    private Map<String, Object> spis = newHashMap();
+    private final Map<String, Object> spis = newHashMap();
 
     @Override
     public void clear() {

@@ -25,9 +25,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
-import javax.xml.bind.JAXBException;
 import java.io.IOException;
-import java.sql.SQLException;
 
 import static org.fest.assertions.Assertions.assertThat;
 
@@ -44,7 +42,7 @@ public class CelerioPackConfigLoaderTest {
     private CelerioPackConfigLoader loader;
 
     @Test
-    public void load() throws ClassNotFoundException, SQLException, JAXBException, IOException {
+    public void load() throws IOException {
 
         CelerioPack celerioPack = loader.load(ctx.getResource(TEMPLATE_PACK_INFO).getFile());
         EntityContextProperty entityContextProperty = celerioPack.getCelerioTemplateContext().getEntityContextProperties().get(0);

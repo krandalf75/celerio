@@ -85,6 +85,10 @@ public class Pack {
         return enable;
     }
 
+    public void setEnable(boolean enable) {
+        this.enable = enable;
+    }
+
     /*
      * Specify the pack order, its main interest is when two packs produce the same artifacts.
      */

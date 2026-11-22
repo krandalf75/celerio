@@ -27,10 +27,12 @@ import static com.google.common.collect.Lists.newArrayList;
 @Slf4j
 public class SavedSearchConvention {
 
-    private Iterable<String> formClassCandidates = newArrayList("formClass", "formClassname");
-    private Iterable<String> nameCandidates = newArrayList("name");
-    private Iterable<String> formContentCandidates = newArrayList("formContent");
-    private Iterable<String> entityNames = newArrayList("savedSearch", "savedSearchForm");
+    private static final String FOUND_ON = " found on ";
+
+    private final Iterable<String> formClassCandidates = newArrayList("formClass", "formClassname");
+    private final Iterable<String> nameCandidates = newArrayList("name");
+    private final Iterable<String> formContentCandidates = newArrayList("formContent");
+    private final Iterable<String> entityNames = newArrayList("savedSearch", "savedSearchForm");
 
     @Getter
     private final SavedSearchAttributes savedSearchAttributes;
@@ -38,6 +40,7 @@ public class SavedSearchConvention {
     @Getter
     private boolean match;
 
+    @SuppressWarnings("java:S6832") // The model creates this helper directly for each entity or attribute.
     public SavedSearchConvention(Entity e) {
         this.e = e;
         this.savedSearchAttributes = attributes(e);
@@ -56,13 +59,13 @@ public class SavedSearchConvention {
     }
 
     private SavedSearchAttributes attributes(Entity e) {
-        SavedSearchAttributes savedSearchAttributes = new SavedSearchAttributes();
+        SavedSearchAttributes candidate = new SavedSearchAttributes();
         if (e.hasSimplePk() //
-                && detectFormClass(e, savedSearchAttributes) //
-                && detectName(e, savedSearchAttributes) //
-                && detectFormContent(e, savedSearchAttributes) //
-                && detectAccount(e, savedSearchAttributes)) {
-            return savedSearchAttributes;
+                && detectFormClass(e, candidate) //
+                && detectName(e, candidate) //
+                && detectFormContent(e, candidate) //
+                && detectAccount(e, candidate)) {
+            return candidate;
         }
         return new SavedSearchAttributes();
     }
@@ -71,7 +74,7 @@ public class SavedSearchConvention {
         for (Attribute a : e.getAttributes().getList()) {
             if (a.isBlob() && match(a.getVar(), formContentCandidates)) {
                 savedSearchAttributes.setFormContent(a);
-                log.debug("'formContent' candidate: " + a.getVar() + " found on " + e.getName());
+                log.debug("'formContent' candidate: " + a.getVar() + FOUND_ON + e.getName());
                 return true;
             }
         }
@@ -82,7 +85,7 @@ public class SavedSearchConvention {
         for (Attribute a : e.getAttributes().getList()) {
             if (a.isString() && match(a.getVar(), nameCandidates)) {
                 savedSearchAttributes.setName(a);
-                log.debug("'name' candidate: " + a.getVar() + " found on " + e.getName());
+                log.debug("'name' candidate: " + a.getVar() + FOUND_ON + e.getName());
                 return true;
             }
         }
@@ -93,7 +96,7 @@ public class SavedSearchConvention {
         for (Attribute a : e.getAttributes().getList()) {
             if (a.isString() && match(a.getVar(), formClassCandidates)) {
                 savedSearchAttributes.setFormClass(a);
-                log.debug("'formClass' candidate: " + a.getVar() + " found on " + e.getName());
+                log.debug("'formClass' candidate: " + a.getVar() + FOUND_ON + e.getName());
                 return true;
             }
         }
@@ -102,14 +105,10 @@ public class SavedSearchConvention {
 
     private boolean detectAccount(Entity e, SavedSearchAttributes savedSearchAttributes) {
         for (Attribute a : e.getAttributes().getList()) {
-            if (a.isSimpleFk()) {
-                if (!e.isManyToManyJoinEntity()) {
-                    if (a.getXToOneRelation().getToEntity().isAccount()) {
-                        savedSearchAttributes.setAccount(a);
-                        log.debug("'account' candidate: " + a.getVar() + " found on " + e.getName());
-                        return true;
-                    }
-                }
+            if (a.isSimpleFk() && !e.isManyToManyJoinEntity() && a.getXToOneRelation().getToEntity().isAccount()) {
+                savedSearchAttributes.setAccount(a);
+                log.debug("'account' candidate: " + a.getVar() + FOUND_ON + e.getName());
+                return true;
             }
         }
         return false;

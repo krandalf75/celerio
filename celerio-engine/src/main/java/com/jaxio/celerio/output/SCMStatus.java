@@ -20,7 +20,7 @@ import java.util.Map;
 
 public class SCMStatus {
 
-    private Map<String, Boolean> map;
+    private final Map<String, Boolean> map;
 
     public SCMStatus(Map<String, Boolean> map) {
         this.map = map;

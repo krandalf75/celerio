@@ -54,7 +54,8 @@ public class ColumnConfig {
     protected ManyToManyConfig manyToManyConfig;
     // db metadata
     protected Boolean ignore;
-    protected JdbcType type; // TODO: confusing ==> rename to jdbcType
+    /** The JDBC type of the database column. */
+    protected JdbcType type;
     protected MappedType mappedType;
     protected Boolean lazy;
     protected String fieldName;
@@ -254,7 +255,7 @@ public class ColumnConfig {
         return mappedType;
     }
 
-    /*
+    /**
      * Should the mapped property be lazy loaded ? If yes, the annotation <code>@Basic(fetch = FetchType.LAZY)</code> is used. Defaults to 'true' for CLOB, BLOB
      * or BYTES mapped types.
      */
@@ -266,9 +267,9 @@ public class ColumnConfig {
         return lazy != null;
     }
 
-    /*
-     * The corresponding variable name in the Java world. By default, the field name is deduced from the column name.<br>
-     * For primary key the field name is always forced to Example: 'first_name' will become 'firstName';
+    /**
+     * The Java field name defaults to a name derived from the column,
+     * such as {@code firstName} for {@code first_name}.
      */
     public String getFieldName() {
         return fieldName;
@@ -396,7 +397,7 @@ public class ColumnConfig {
     }
 
     public boolean isTransient() {
-        return asTransient != null ? asTransient : false;
+        return Boolean.TRUE.equals(asTransient);
     }
 
     /*
@@ -624,26 +625,14 @@ public class ColumnConfig {
         return TRUE == getPassword();
     }
 
-    public static Predicate<ColumnConfig> SEARCH_RESULT = new Predicate<ColumnConfig>() {
-        @Override
-        public boolean apply(ColumnConfig columnConfig) {
-            return columnConfig.hasTrueSearchResult();
-        }
-    };
+    @SuppressWarnings("java:S4738") // Template packs use these Guava predicate types.
+    public static Predicate<ColumnConfig> SEARCH_RESULT = ColumnConfig::hasTrueSearchResult;
 
-    public static Predicate<ColumnConfig> SEARCH_FIELD = new Predicate<ColumnConfig>() {
-        @Override
-        public boolean apply(ColumnConfig columnConfig) {
-            return columnConfig.hasTrueSearchField();
-        }
-    };
+    @SuppressWarnings("java:S4738") // Template packs use these Guava predicate types.
+    public static Predicate<ColumnConfig> SEARCH_FIELD = ColumnConfig::hasTrueSearchField;
 
-    public static Predicate<ColumnConfig> FORM_FIELD = new Predicate<ColumnConfig>() {
-        @Override
-        public boolean apply(ColumnConfig columnConfig) {
-            return columnConfig.hasTrueFormField();
-        }
-    };
+    @SuppressWarnings("java:S4738") // Template packs use these Guava predicate types.
+    public static Predicate<ColumnConfig> FORM_FIELD = ColumnConfig::hasTrueFormField;
 
 
     /**

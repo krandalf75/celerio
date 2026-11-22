@@ -37,9 +37,10 @@ public class ImportsHolderTest {
         ImportsHolder twoImports = new ImportsHolder("");
         twoImports.add("static org.A");
         twoImports.add("static fr.B");
-        assertThat(twoImports.toJavaImportString()).isEqualTo("" //
-                + "import static fr.B;\n" //
-                + "import static org.A;\n");
+        assertThat(twoImports.toJavaImportString()).isEqualTo("""
+                import static fr.B;
+                import static org.A;
+                """);
     }
 
     @Test
@@ -51,15 +52,16 @@ public class ImportsHolderTest {
         holder.add("org.D");
         holder.add("fr.C");
 
-        assertThat(holder.toJavaImportString()).isEqualTo("" //
-                + "import java.A;\n" //
-                + "import java.B;\n" //
-                + "\n" //
-                + "import javax.C;\n" //
-                + "\n" //
-                + "import org.D;\n" //
-                + "\n" //
-                + "import fr.C;\n");
+        assertThat(holder.toJavaImportString()).isEqualTo("""
+                import java.A;
+                import java.B;
+
+                import javax.C;
+
+                import org.D;
+
+                import fr.C;
+                """);
     }
 
     @Test
@@ -73,18 +75,19 @@ public class ImportsHolderTest {
         holder.add("static fr.A");
         holder.add("static org.B");
 
-        assertThat(holder.toJavaImportString()).isEqualTo("" //
-                + "import static fr.A;\n" //
-                + "import static org.B;\n" //
-                + "\n" //
-                + "import java.A;\n" //
-                + "import java.B;\n" //
-                + "\n" //
-                + "import javax.C;\n" //
-                + "\n" //
-                + "import org.D;\n" //
-                + "\n" //
-                + "import fr.C;\n");
+        assertThat(holder.toJavaImportString()).isEqualTo("""
+                import static fr.A;
+                import static org.B;
+
+                import java.A;
+                import java.B;
+
+                import javax.C;
+
+                import org.D;
+
+                import fr.C;
+                """);
     }
 
     @Test

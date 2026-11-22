@@ -30,15 +30,15 @@ import static java.util.Collections.unmodifiableList;
 
 @Getter
 public abstract class SimpleRelation extends AbstractRelation {
-    private Attribute fromAttribute;
-    private Entity fromEntity;
-    private Entity toEntity;
-    private Attribute toAttribute;
-    private Namer from;
-    private Namer to;
-    private List<Relation> relations;
+    private final Attribute fromAttribute;
+    private final Entity fromEntity;
+    private final Entity toEntity;
+    private final Attribute toAttribute;
+    private final Namer from;
+    private final Namer to;
+    private final List<Relation> relations;
 
-    public SimpleRelation(Namer fromNamer, Namer toNamer, Attribute fromAttribute, Entity fromEntity, Entity toEntity, Attribute toAttribute) {
+    protected SimpleRelation(Namer fromNamer, Namer toNamer, Attribute fromAttribute, Entity fromEntity, Entity toEntity, Attribute toAttribute) {
         this.from = checkNotNull(fromNamer);
         this.to = checkNotNull(toNamer);
         this.fromAttribute = checkNotNull(fromAttribute);
@@ -49,12 +49,12 @@ public abstract class SimpleRelation extends AbstractRelation {
     }
 
     @Override
-    final public boolean isSimple() {
+    public final boolean isSimple() {
         return true;
     }
 
     @Override
-    final public boolean isComposite() {
+    public final boolean isComposite() {
         return false;
     }
 

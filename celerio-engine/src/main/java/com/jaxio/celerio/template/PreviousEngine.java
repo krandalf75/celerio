@@ -29,12 +29,12 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.util.Map;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.io.File.separatorChar;
 import static java.util.regex.Pattern.*;
 import static org.apache.commons.io.FilenameUtils.normalize;
@@ -60,30 +60,20 @@ import static org.apache.velocity.util.StringUtils.normalizePath;
 @Service
 @Slf4j
 public class PreviousEngine {
-    private final static String DYNA_IMPORTS_TAG = "__celerio_dyna_imports__";
 
-    private final static String BASE_SUFFIX = "Base";
-    private final static String BASE_SUFFIX_ = BASE_SUFFIX + "_";
+    private static final String JAVA_EXTENSION = ".java";
+    private static final String METAMODEL_EXTENSION = "_" + JAVA_EXTENSION;
+    private static final String DYNA_IMPORTS_TAG = "__celerio_dyna_imports__";
 
-    @Autowired
-    private ApplicationContext applicationContext;
+    private static final String BASE_SUFFIX = "Base";
+    private static final String METAMODEL_BASE_SUFFIX = BASE_SUFFIX + "_";
 
-    @Autowired
-    private EclipseCodeFormatter eclipseCodeFormatter;
-
-    @Autowired
-    private XmlCodeFormatter xmlCodeFormatter;
-
-    @Autowired
-    private IOUtil ioUtil;
-
-    @Autowired
-    private ContentWriter contentWriter;
-
-    @Autowired
-    private Config config;
-    @Autowired
-    private VelocityGenerator velocityGenerator;
+    private final EclipseCodeFormatter eclipseCodeFormatter;
+    private final XmlCodeFormatter xmlCodeFormatter;
+    private final IOUtil ioUtil;
+    private final ContentWriter contentWriter;
+    private final Config config;
+    private final VelocityGenerator velocityGenerator;
     @Getter
     private String currentFullFilename = "";
     private String currentClass = "";
@@ -95,6 +85,21 @@ public class PreviousEngine {
     private OutputResult outputResult;
     private SourceFile userSource;
     private SourceFile generatedSource;
+
+    public PreviousEngine() {
+        this(null, null, null, null, null, null);
+    }
+
+    @Autowired
+    public PreviousEngine(EclipseCodeFormatter eclipseCodeFormatter, XmlCodeFormatter xmlCodeFormatter, IOUtil ioUtil,
+                          ContentWriter contentWriter, Config config, VelocityGenerator velocityGenerator) {
+        this.eclipseCodeFormatter = eclipseCodeFormatter;
+        this.xmlCodeFormatter = xmlCodeFormatter;
+        this.ioUtil = ioUtil;
+        this.contentWriter = contentWriter;
+        this.config = config;
+        this.velocityGenerator = velocityGenerator;
+    }
 
     // ----------------------------------------------------------------------
     // Take over related (user extends the generated class + "Base")
@@ -123,7 +128,7 @@ public class PreviousEngine {
     /**
      * In your velocity template, call this method to set the path and filename of the generated file.
      * The prefix src/main/generated-java or target/.../src/main/java is added automatically.
-     * If the file that already exists in the user space uses inheritance, the, it generates a XXBase class instead of XXX
+     * If a user-defined Example extends ExampleBase, generation writes ExampleBase.
      *
      * @param filePath            for example com.acme.myapp or com/acme/myapp
      * @param filename            for example for example MyClass.java or MyClassTest.java
@@ -132,122 +137,67 @@ public class PreviousEngine {
      * @throws IllegalArgumentException if file extension is not .java, .htm or .html
      */
     public String setCurrentFilename(String filePath, String filename, String userDomainPath, String generatedDomainPath) throws Exception {
+        if (filename.startsWith(JAVA_EXTENSION) || !filename.contains(JAVA_EXTENSION)) {
+            String targetDomain = generatedDomainPath.equals(WellKnownFolder.FLOWS.getGeneratedFolder())
+                    ? generatedDomainPath : userDomainPath;
+            return setCurrentFilename(filePath, filename, targetDomain);
+        }
+        if (filename.endsWith(JAVA_EXTENSION)) {
+            ImportsContext.setCurrentImportsHolder(new ImportsHolder(filePath));
+        }
 
-        if (filename.indexOf(".java") > 0) {
-            String comment;
+        String userFilename = convertToFullFilename(filePath, filename, userDomainPath);
+        String generatedFilename = convertToFullFilename(filePath, filename, generatedDomainPath);
+        boolean generatedMetamodel = filename.endsWith(METAMODEL_EXTENSION) && generatedSource.fileExists(generatedFilename);
+        File existingFile = findExistingJavaFile(userFilename, generatedFilename, generatedMetamodel);
+        if (existingFile == null) {
+            return setRegularJavaFilename(filePath, filename, generatedDomainPath);
+        }
 
-            if (filename.endsWith(".java")) {
-                ImportsContext.setCurrentImportsHolder(new ImportsHolder(filePath));
+        String baseClassName = convertFileNameToBaseClassName(filename);
+        String comment;
+        if (javaFileExtendsClass(ioUtil.fileToString(existingFile), baseClassName)) {
+            currentClass = baseClassName;
+            currentRootClass = convertFileNameToClassName(filename);
+            currentRootCast = "(" + currentRootClass + ") ";
+            ImportsContext.setIsExtendedByUser(true);
+            comment = setCurrentFilename(filePath, currentClass + JAVA_EXTENSION, generatedDomainPath);
+            if (log.isInfoEnabled()) {
+                packInfo("TAKE OVER detected, will generate base class: " + currentClass);
             }
-
-            String userJavaFilename = convertToFullFilename(filePath, filename, userDomainPath);
-            String generatedJavaFilename = convertToFullFilename(filePath, filename, generatedDomainPath);
-
-            File userJavaFile = null;
-            boolean metaModelFileAndAlreadyExistsInGenerated = false;
-
-            if (filename.endsWith("_.java") && generatedSource.fileExists(generatedJavaFilename)) {
-                metaModelFileAndAlreadyExistsInGenerated = true;
-            }
-
-            if (userSource.fileExists(userJavaFilename)) {
-                userJavaFile = new File(userSource.getFullPath(userJavaFilename));
-            } else if (metaModelFileAndAlreadyExistsInGenerated) {
-                // Entity meta model special case. Here is how it works:
-                // 1- Entity.p.vm.java handle the meta model take over if needed (creates "...class Xxx_ extends XxxBase_ .."
-                // 2- EntityMeta.p.vm.java is executed, it detects the above take over and then generate the XxxBase_ ...
-                // The trick is that during 1-, the file is created under the generatedSource folder, whereas generally
-                // take over happens under the userSource... but we don't want that for the metamodel as it would pollute the
-                // user source base and also because the take over is generated.
-                userJavaFile = new File(generatedSource.getFullPath(generatedJavaFilename));
-            }
-
-            if (userJavaFile != null) {
-                String userFileContent = ioUtil.fileToString(userJavaFile);
-                String baseClassName = convertFileNameToBaseClassName(filename);
-
-                if (javaFileExtendsClass(userFileContent, baseClassName)) {
-                    currentClass = baseClassName;
-                    currentRootClass = convertFileNameToClassName(filename);
-                    currentRootCast = "(" + currentRootClass + ") ";
-                    ImportsContext.setIsExtendedByUser(true);
-                    comment = setCurrentFilename(filePath, currentClass + ".java", generatedDomainPath);
-
-                    if (log.isInfoEnabled()) {
-                        packInfo("TAKE OVER detected, will generate base class: " + currentClass);
-                    }
-                } else if (metaModelFileAndAlreadyExistsInGenerated) {
-                    comment = setCurrentFilename(filePath, filename, generatedDomainPath);
-                    currentClass = convertFileNameToClassName(filename);
-                    currentRootClass = currentClass;
-                    currentRootCast = "";
-                    ImportsContext.setIsExtendedByUser(false);
-                } else {
-                    // HACK: place it in userDomainPath so it gets detected as a collision by processFile in case baseDir equals outputDirectory
-                    comment = setCurrentFilename(filePath, filename, userDomainPath);
-                    currentClass = convertFileNameToClassName(filename);
-                    currentRootClass = currentClass;
-                    currentRootCast = "";
-                    ImportsContext.setIsExtendedByUser(false);
-                }
-
-                // Move old generated file (when present), as it breaks compilation.
-                // Such move cases are not handled in the contentWriter.processFile and must be therefore handled here
-                // NOTE: do not try to optimize this if/else check, it would be error prone and not understandable (thanks :-))
-                boolean moveOldGeneratedFile = false;
-                boolean sameSubPath = normalizePath(userDomainPath).equals(normalizePath(generatedDomainPath));
-
-                if (ImportsContext.isExtendedByUser()) {
-                    // We generate XBase.java, existing file could be X.java
-                    if (outputResult.sameDirectory()) {
-                        if (!sameSubPath) {
-                            if (!metaModelFileAndAlreadyExistsInGenerated) {
-                                // move generatedDomainPath/X.java as the user has created his own X.java in the userDomainPath
-                                moveOldGeneratedFile = true;
-                            }
-                        } // else: we keep the file as it is the user's one!
-                    } else {
-                        // no risk as all is clearly separated, except for automatic metamodel takeover which occurs in the generatedSource.
-                        // we clearly do not want to move the file that we automatically created.
-                        if (!metaModelFileAndAlreadyExistsInGenerated) {
-                            moveOldGeneratedFile = true;
-                        }
-                    }
-                } else {
-                    if (outputResult.sameDirectory()) {
-                        if (!sameSubPath) {
-                            if (!metaModelFileAndAlreadyExistsInGenerated) {
-                                moveOldGeneratedFile = true;
-                            }
-                        } // else: we keep the file as it is the user's one!
-                    } // else: such case is taken into account in contentWriter.processFile
-                }
-
-                if (moveOldGeneratedFile) {
-                    String oldGeneratedJavaFilePath = convertToFullFilename(filePath, filename, generatedDomainPath);
-                    if (generatedSource.fileExists(oldGeneratedJavaFilePath)) {
-                        ioUtil.forceMove(new File(generatedSource.getFullPath(oldGeneratedJavaFilePath)),
-                                new File(userSource.getFullPath(outputResult.getCollisionName(oldGeneratedJavaFilePath) + ".old")));
-                    }
-                }
-
-                return comment;
-            } else {
-                // does not exist, we can generate it as is
-                comment = setCurrentFilename(filePath, filename, generatedDomainPath);
-                currentClass = convertFileNameToClassName(filename);
-                currentRootClass = currentClass;
-                currentRootCast = "";
-                ImportsContext.setIsExtendedByUser(false);
-            }
-
-            return comment;
-        } else if (generatedDomainPath.equals(WellKnownFolder.FLOWS.getGeneratedFolder())) {
-            String comment = setCurrentFilename(filePath, filename, generatedDomainPath);
-            return comment;
         } else {
-            String comment = setCurrentFilename(filePath, filename, userDomainPath);
-            return comment;
+            // Keep the user path so the content writer can detect a collision in shared output directories.
+            String targetDomain = generatedMetamodel ? generatedDomainPath : userDomainPath;
+            comment = setRegularJavaFilename(filePath, filename, targetDomain);
+        }
+        moveSupersededJavaFile(userDomainPath, generatedDomainPath, generatedFilename, generatedMetamodel);
+        return comment;
+    }
+
+    private File findExistingJavaFile(String userFilename, String generatedFilename, boolean generatedMetamodel) {
+        if (userSource.fileExists(userFilename)) {
+            return new File(userSource.getFullPath(userFilename));
+        }
+        // The entity template may write the metamodel subclass into generated sources before this template runs.
+        return generatedMetamodel ? new File(generatedSource.getFullPath(generatedFilename)) : null;
+    }
+
+    private String setRegularJavaFilename(String filePath, String filename, String domain) throws Exception {
+        String comment = setCurrentFilename(filePath, filename, domain);
+        currentClass = convertFileNameToClassName(filename);
+        currentRootClass = currentClass;
+        currentRootCast = "";
+        ImportsContext.setIsExtendedByUser(false);
+        return comment;
+    }
+
+    private void moveSupersededJavaFile(String userDomainPath, String generatedDomainPath, String generatedFilename, boolean generatedMetamodel) {
+        boolean sameSubPath = normalizePath(userDomainPath).equals(normalizePath(generatedDomainPath));
+        boolean sameDirectory = outputResult.sameDirectory();
+        boolean preserveFile = generatedMetamodel || (sameDirectory ? sameSubPath : !ImportsContext.isExtendedByUser());
+        if (!preserveFile && generatedSource.fileExists(generatedFilename)) {
+            ioUtil.forceMove(new File(generatedSource.getFullPath(generatedFilename)),
+                    new File(userSource.getFullPath(outputResult.getCollisionName(generatedFilename) + ".old")));
         }
     }
 
@@ -266,19 +216,14 @@ public class PreviousEngine {
     public String getCurrentRootCast(String... generics) {
         if (isBlank(currentRootCast)) {
             return "";
-        } else if (generics == null || generics.length == 0) {
-            return currentRootCast;
-        } else {
-            String types = "";
-            int i = 0;
-            for (String generic : generics) {
-                types += generic + (i == generics.length ? "" : ", ");
-                i++;
-            }
-            return currentRootCast + "<" + types + ">";
         }
+        if (generics == null || generics.length == 0) {
+            return currentRootCast;
+        }
+        return "(" + currentRootClass + "<" + String.join(", ", generics) + ">) ";
     }
 
+    @SuppressWarnings("java:S100") // Existing template packs call this method by name.
     public String getCurrentClassWithout_() {
         if (currentClass.endsWith("_")) {
             return substringBeforeLast(currentClass, "_");
@@ -301,10 +246,10 @@ public class PreviousEngine {
      * add Base to a given java filename it is used for transparently subclassing generated classes
      */
     private String convertFileNameToBaseClassName(String filename) {
-        if (filename.endsWith("_.java")) {
-            return substringBeforeLast(filename, "_.java") + BASE_SUFFIX_;
+        if (filename.endsWith(METAMODEL_EXTENSION)) {
+            return substringBeforeLast(filename, METAMODEL_EXTENSION) + METAMODEL_BASE_SUFFIX;
         } else {
-            return substringBeforeLast(filename, ".java") + BASE_SUFFIX;
+            return substringBeforeLast(filename, JAVA_EXTENSION) + BASE_SUFFIX;
         }
     }
 
@@ -312,19 +257,19 @@ public class PreviousEngine {
     // private Utils
     // --------------------------------------------
 
-    protected String convertToFullFilename(String relpath_or_package, String filename, String domain) throws Exception {
+    protected String convertToFullFilename(String relativePathOrPackage, String filename, String domain) throws Exception {
 
-        if (relpath_or_package != null && ".".equals(relpath_or_package.trim())) {
-            log.warn("******** BUG IN FilenameUtils ==============> " + normalize(relpath_or_package.replace('.', separatorChar) + separatorChar + filename));
+        if (relativePathOrPackage != null && ".".equals(relativePathOrPackage.trim())) {
+            log.warn("******** BUG IN FilenameUtils ==============> " + normalize(relativePathOrPackage.replace('.', separatorChar) + separatorChar + filename));
 
-            throw new Exception("not a good practice, please clean up your template relative path, you may set it to empty string... :" + relpath_or_package
+            throw new IllegalArgumentException("not a good practice, please clean up your template relative path, you may set it to empty string... :" + relativePathOrPackage
                     + ", " + filename);
         }
 
         String ret;
 
-        if (hasLength(relpath_or_package)) {
-            ret = normalize(relpath_or_package.replace('.', separatorChar) + separatorChar + filename);
+        if (hasLength(relativePathOrPackage)) {
+            ret = normalize(relativePathOrPackage.replace('.', separatorChar) + separatorChar + filename);
         } else {
             ret = filename;
         }
@@ -336,7 +281,7 @@ public class PreviousEngine {
         }
     }
 
-    /*
+    /**
      * This method creates a file and generates the class given a template and the type of template @param templateName the velocity template @param
      * templateType the type of template (schema/table/column)
      */
@@ -350,7 +295,7 @@ public class PreviousEngine {
 
             try {
                 evaluatedTemplate = velocityGenerator.evaluate(context, templatePack, template);
-            } catch (StopFileReachedException e) {
+            } catch (StopFileReachedException _) {
                 return;
             }
 
@@ -374,7 +319,7 @@ public class PreviousEngine {
                 }
             }
 
-            if (currentFullFilename.endsWith(".java")) {
+            if (currentFullFilename.endsWith(JAVA_EXTENSION)) {
                 evaluatedTemplate = eclipseCodeFormatter.format(evaluatedTemplate);
             } else if (currentFullFilename.endsWith(".xml") || currentFullFilename.endsWith(".xhtml")) {
                 evaluatedTemplate = xmlCodeFormatter.format(evaluatedTemplate);
@@ -385,7 +330,7 @@ public class PreviousEngine {
                 packDebug(templatePack, "processing template " + template.getName() + " (" + currentFullFilename + ")");
             }
             try {
-                contentWriter.processFile(outputResult, templatePack, template, evaluatedTemplate.getBytes("UTF-8"), currentFullFilename);
+                contentWriter.processFile(outputResult, templatePack, template, evaluatedTemplate.getBytes(UTF_8), currentFullFilename);
             } catch (Exception e) {
                 log.error("In " + templatePack.getName() + ":" + template.getName() + " template, got exception " + e.getMessage(), e);
             }
@@ -411,7 +356,7 @@ public class PreviousEngine {
      * return the class name given a java file.
      */
     private String convertFileNameToClassName(String filename) {
-        return StringUtils.substringBefore(filename, ".java");
+        return StringUtils.substringBefore(filename, JAVA_EXTENSION);
     }
 
     private boolean javaFileExtendsClass(String javaFileContent, String extendedClassName) {
@@ -457,7 +402,7 @@ public class PreviousEngine {
     }
 
     private boolean hasLength(String s) {
-        return s != null && s.length() > 0;
+        return s != null && !s.isEmpty();
     }
 
     public void stopFileGeneration() {

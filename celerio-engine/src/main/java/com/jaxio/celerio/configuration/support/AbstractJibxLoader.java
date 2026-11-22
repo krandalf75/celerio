@@ -51,7 +51,7 @@ public abstract class AbstractJibxLoader<T> {
     public void write(T object, File file) throws XmlMappingException, IOException {
         try {
             file.getParentFile().mkdirs();
-        } catch (Exception e) {
+        } catch (Exception _) {
             //
         }
         write(object, new FileOutputStream(file));

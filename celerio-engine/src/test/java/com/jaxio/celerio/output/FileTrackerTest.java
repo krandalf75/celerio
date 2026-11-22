@@ -51,7 +51,6 @@ public class FileTrackerTest {
         File f2 = createFileWithContent(projectDir, "f2.txt", "my content2");
 
         assertThat(f1.exists()).isTrue();
-        ;
         assertThat(f2.exists()).isTrue();
 
         generatedFiles.put("f1.txt", new FileMetaData(null, null, "f1.txt", f1));

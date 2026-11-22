@@ -22,7 +22,7 @@ public enum AttributeOrder {
     SEARCH_FIELD("searchFieldOrderAsString"),
     SEARCH_RESULT("searchResultOrderAsString");
 
-    private String attributeSortProperty;
+    private final String attributeSortProperty;
 
     AttributeOrder(String attributeSortProperty) {
         this.attributeSortProperty = attributeSortProperty;

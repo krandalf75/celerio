@@ -46,40 +46,40 @@ public class SimplePrimaryKey extends AbstractNamer implements PrimaryKey {
     }
 
     @Override
-    final public boolean isNoPk() {
+    public final boolean isNoPk() {
         return false;
     }
 
     @Override
-    final public boolean isSimple() {
+    public final boolean isSimple() {
         return true;
     }
 
     @Override
-    final public boolean isComposite() {
+    public final boolean isComposite() {
         return false;
     }
 
     @Override
-    final public boolean isJavaBaseClass() {
+    public final boolean isJavaBaseClass() {
         return attribute.isJavaBaseClass();
     }
 
     @Override
-    final public boolean isDate() {
-        return isSimple() && getAttribute().isDate();
+    public final boolean isDate() {
+        return getAttribute().isDate();
     }
 
     @Override
-    final public boolean isEnum() {
-        return isSimple() && getAttribute().isEnum();
+    public final boolean isEnum() {
+        return getAttribute().isEnum();
     }
 
     /**
      * Is there a XtoOne relation pointing to this PK
      */
     @Override
-    final public boolean isImported() {
+    public final boolean isImported() {
         return getEntity().getInverseRelations().getFlatUp().getSize() > 0;
     }
 

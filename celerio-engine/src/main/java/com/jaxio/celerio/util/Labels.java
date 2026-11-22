@@ -28,7 +28,7 @@ public class Labels {
     @Setter
     private String fallBack;
 
-    private Map<String, String> labels = new HashMap<String, String>();
+    private final Map<String, String> labelsByLanguage = new HashMap<>();
 
     public Labels() {
     }
@@ -40,7 +40,7 @@ public class Labels {
 
         for (Label label : labels) {
             String key = label.getLang() == null ? "base" : label.getLang();
-            this.labels.put(key, label.getValue());
+            labelsByLanguage.put(key, label.getValue());
         }
     }
 
@@ -48,16 +48,16 @@ public class Labels {
      * Is there any base label? The fallback does not count.
      */
     public boolean hasBaseLabel() {
-        return labels.get("base") != null;
+        return labelsByLanguage.get("base") != null;
     }
 
     public String getLabel() {
-        String label = labels.get("base");
+        String label = labelsByLanguage.get("base");
         return label != null ? label : fallBack;
     }
 
     public String getLabel(String lang) {
-        String label = labels.get(lang);
+        String label = labelsByLanguage.get(lang);
         return label != null ? label : getLabel();
     }
 }

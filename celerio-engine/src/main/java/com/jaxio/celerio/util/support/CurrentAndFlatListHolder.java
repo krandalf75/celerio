@@ -16,14 +16,13 @@
 
 package com.jaxio.celerio.util.support;
 
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.jaxio.celerio.util.Hierarchical;
 import com.jaxio.celerio.util.ListHolder;
 import com.jaxio.celerio.util.Named;
 
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import static com.google.common.collect.Iterables.filter;
 import static com.google.common.collect.Lists.newArrayList;
@@ -43,9 +42,9 @@ import static org.springframework.util.Assert.notNull;
  */
 public class CurrentAndFlatListHolder<T extends Named, H extends Hierarchical<H>> extends AbstractListHolder<T> {
 
-    private H node;
-    private ListGetter<T, H> listGetter;
-    private Predicate<T> predicate;
+    private final H node;
+    private final ListGetter<T, H> listGetter;
+    private final Predicate<T> predicate;
 
     private SimpleListHolder<T> flatDown = null;
     private SimpleListHolder<T> flatAbove = null;
@@ -63,19 +62,20 @@ public class CurrentAndFlatListHolder<T extends Named, H extends Hierarchical<H>
         notNull(listGetter, "the listGetter must not be null");
         this.node = node;
         this.listGetter = listGetter;
-        this.predicate = Predicates.<T>alwaysTrue();
+        this.predicate = ignored -> true;
     }
 
-    public CurrentAndFlatListHolder(H node, ListGetter<T, H> listGetter, Predicate<T> predicate) {
+    @SuppressWarnings("java:S4738") // Existing template packs pass Guava predicates.
+    public CurrentAndFlatListHolder(H node, ListGetter<T, H> listGetter, com.google.common.base.Predicate<T> predicate) {
         notNull(node, "the node must not be null");
         this.node = node;
         this.listGetter = listGetter;
-        this.predicate = predicate;
+        this.predicate = predicate::apply;
     }
 
     @Override
     protected Iterable<T> getIterable() {
-        return filter(listGetter.getList(node), predicate);
+        return filter(listGetter.getList(node), predicate::test);
     }
 
 
@@ -162,11 +162,11 @@ public class CurrentAndFlatListHolder<T extends Named, H extends Hierarchical<H>
     //
 
     private SimpleListHolder<T> newSimpleListHolder(Flatten flatten, String sortProperty) {
-        return new SimpleListHolder<T>(getIterable(flatten), predicate, sortProperty);
+        return new SimpleListHolder<>(getIterable(flatten), predicate::test, sortProperty);
     }
 
     private SimpleListHolder<T> newUniqueSimpleListHolder(Flatten flatten, String sortProperty) {
-        return new SimpleListHolder<T>(getIterableNoDuplicate(flatten), predicate, sortProperty);
+        return new SimpleListHolder<>(getIterableNoDuplicate(flatten), predicate::test, sortProperty);
     }
 
     private Iterable<T> getIterableNoDuplicate(Flatten flatten) {
@@ -198,6 +198,6 @@ public class CurrentAndFlatListHolder<T extends Named, H extends Hierarchical<H>
             return HierarchyUtil.flattenDownToLeaves(node.getRoot(), listGetter);
         }
 
-        throw new RuntimeException("Flatten " + flatten + " is not handled");
+        throw new IllegalArgumentException("Flatten " + flatten + " is not handled");
     }
 }

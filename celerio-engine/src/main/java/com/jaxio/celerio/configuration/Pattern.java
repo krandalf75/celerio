@@ -29,17 +29,16 @@ import java.util.List;
  * A pattern is a structure to help handling inclusion and exclusion of resources
  */
 public class Pattern {
-    @Setter
-    private String pattern;
+    private String pathPattern;
     @Setter
     private boolean include;
-    private transient AntPathMatcher antPathMatcher = new AntPathMatcher();
+    private final AntPathMatcher antPathMatcher = new AntPathMatcher();
 
     public Pattern() {
     }
 
     public Pattern(String pattern, boolean include) {
-        this.pattern = plateformIndependant(pattern);
+        this.pathPattern = normalizePath(pattern);
         this.include = include;
     }
 
@@ -58,7 +57,11 @@ public class Pattern {
      */
     @XmlAttribute(name = "pattern")
     public String getPattern() {
-        return pattern;
+        return pathPattern;
+    }
+
+    public void setPattern(String pattern) {
+        this.pathPattern = pattern;
     }
 
     /*
@@ -78,15 +81,14 @@ public class Pattern {
         if (value == null) {
             return false;
         }
-        String cleanValue = plateformIndependant(value);
-        if (antPathMatcher.isPattern(pattern)) {
-            return antPathMatcher.match(pattern.toLowerCase(), cleanValue.toLowerCase());
-        } else {
-            return cleanValue.toLowerCase().equalsIgnoreCase(pattern.toLowerCase());
+        String cleanValue = normalizePath(value);
+        if (antPathMatcher.isPattern(pathPattern)) {
+            return antPathMatcher.match(pathPattern.toLowerCase(), cleanValue.toLowerCase());
         }
+        return cleanValue.toLowerCase().equalsIgnoreCase(pathPattern.toLowerCase());
     }
 
-    private String plateformIndependant(String value) {
+    private String normalizePath(String value) {
         return value.replace(File.separator, AntPathMatcher.DEFAULT_PATH_SEPARATOR);
     }
 
@@ -95,7 +97,7 @@ public class Pattern {
     }
 
     public boolean isIncluded() {
-        return include;
+        return isInclude();
     }
 
     public static boolean hasPattern(List<Pattern> patterns, String value) {
@@ -110,13 +112,7 @@ public class Pattern {
             }
         }
 
-        if (hasOnlyExcludes(patterns)) {
-            return true;
-        } else if (hasOnlyIncludes(patterns)) {
-            return false;
-        } else {
-            return false;
-        }
+        return hasOnlyExcludes(patterns);
     }
 
     private static boolean hasOnlyExcludes(List<Pattern> patterns) {
@@ -128,12 +124,4 @@ public class Pattern {
         return true;
     }
 
-    private static boolean hasOnlyIncludes(List<Pattern> patterns) {
-        for (Pattern pattern : patterns) {
-            if (pattern.isExcluded()) {
-                return false;
-            }
-        }
-        return true;
-    }
 }

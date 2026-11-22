@@ -17,18 +17,18 @@
 package com.jaxio.celerio.configuration.entity;
 
 import com.jaxio.celerio.configuration.MetaAttribute;
-import lombok.Getter;
+import lombok.AccessLevel;
 import lombok.Setter;
 
 import java.util.List;
 
-import static com.google.common.collect.Lists.newArrayList;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.springframework.util.StringUtils.hasLength;
 
 @Setter
 public class ManyToOneConfig implements CascadeGetter, CacheConfigGetter, FetchTypeGetter, AssociationActionGetter, LabelGetter, TargetEntityNameGetter {
-    private String var;
+    @Setter(AccessLevel.NONE)
+    private String associationVar;
     private FetchType fetch;
     private String targetEntityName;
     private List<Label> labels;
@@ -41,7 +41,11 @@ public class ManyToOneConfig implements CascadeGetter, CacheConfigGetter, FetchT
      * The variable name for association. It should be singular, for example: 'parent'.
      */
     public String getVar() {
-        return var;
+        return associationVar;
+    }
+
+    public void setVar(String varName) {
+        this.associationVar = varName;
     }
 
     public boolean hasVar() {

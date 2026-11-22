@@ -20,6 +20,9 @@ import java.io.File;
 
 public class FileUtil {
 
+    private FileUtil() {
+    }
+
     public static String getPathRelativeToBase(File targetFile, String basePath) {
         String absoluteBasePath = new File(basePath).getAbsolutePath();
         String absolutePath = targetFile.getAbsolutePath();

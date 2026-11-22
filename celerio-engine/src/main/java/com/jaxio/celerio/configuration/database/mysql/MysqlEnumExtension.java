@@ -20,40 +20,35 @@ import com.jaxio.celerio.configuration.database.Column;
 import com.jaxio.celerio.configuration.database.Metadata;
 import com.jaxio.celerio.configuration.database.Table;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 
 @Service
 public class MysqlEnumExtension extends MysqlExtension {
+    private static final String ENUM_COLUMNS = """
+            SELECT COLUMN_NAME, COLUMN_TYPE
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = COALESCE(?, DATABASE()) AND TABLE_NAME = ? AND DATA_TYPE = 'enum'
+            ORDER BY ORDINAL_POSITION
+            """;
 
-    private MysqlEnumValuesExtractor mysqlEnumValuesExtractor = new MysqlEnumValuesExtractor();
+    private final MysqlEnumValuesExtractor mysqlEnumValuesExtractor = new MysqlEnumValuesExtractor();
 
     @Override
     public void apply(Connection connection, Metadata metadata) {
         JdbcTemplate jdbcTemplate = getJdbcTemplate(connection);
         for (Table table : metadata.getTables()) {
-            processEnums(jdbcTemplate, metadata, table);
+            processEnums(jdbcTemplate, table);
         }
     }
 
-    private void processEnums(JdbcTemplate jdbcTemplate, final Metadata metadata, final Table table) {
-        jdbcTemplate.query("show columns from " + table.getName() + " where type like 'enum%'", new RowMapper<Void>() {
-            @Override
-            public Void mapRow(ResultSet rs, int rowNum) throws SQLException {
-                processEnumType(metadata, table, rs.getString("Field"), rs.getString("Type"));
-                return null;
+    private void processEnums(JdbcTemplate jdbcTemplate, Table table) {
+        jdbcTemplate.query(ENUM_COLUMNS, new Object[]{table.getCatalog(), table.getName()}, rs -> {
+            Column column = table.getColumnByName(rs.getString("COLUMN_NAME"));
+            if (column != null) {
+                mysqlEnumValuesExtractor.extract(rs.getString("COLUMN_TYPE")).forEach(column::addEnumValue);
             }
         });
-    }
-
-    private void processEnumType(Metadata metadata, Table table, String columnName, String constraint) {
-        Column column = table.getColumnByName(columnName);
-        for (String value : mysqlEnumValuesExtractor.extract(constraint)) {
-            column.addEnumValue(value);
-        }
     }
 }

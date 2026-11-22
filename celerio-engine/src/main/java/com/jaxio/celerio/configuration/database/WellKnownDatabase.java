@@ -19,6 +19,8 @@ package com.jaxio.celerio.configuration.database;
 import lombok.Getter;
 
 @Getter
+// Enum names are public, and the dotted numbers are Maven dependency versions.
+@SuppressWarnings({"java:S115", "java:S1313"})
 public enum WellKnownDatabase {
     H2("h2", "com.h2database", "h2", "1.3.172", "org.hibernate.dialect.H2Dialect", ";"), //
     Postgresql("postgresql", "org.postgresql", "postgresql", "8.2-504.jdbc3", "org.hibernate.dialect.PostgreSQLDialect", ";"), //

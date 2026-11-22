@@ -30,11 +30,13 @@ import static com.google.common.collect.Lists.newArrayList;
  */
 @Slf4j
 public class AccountConvention {
-    private Iterable<String> usernameCandidates = newArrayList("login", "username", "identifiant", "email", "emailAddress", "mail");
-    private Iterable<String> emailCandidates = newArrayList("email", "emailAddress", "mail");
-    private Iterable<String> passwordCandidates = newArrayList("password", "pwd", "passwd", "motdepasse");
-    private Iterable<String> enabledCandidates = newArrayList("isenabled", "enabled");
-    private Iterable<String> roleNameCandidates = newArrayList("authority", "namelocale", "rolename", "role");
+
+    private static final String FOUND_ON = " found on ";
+    private final Iterable<String> usernameCandidates = newArrayList("login", "username", "identifiant", "email", "emailAddress", "mail");
+    private final Iterable<String> emailCandidates = newArrayList("email", "emailAddress", "mail");
+    private final Iterable<String> passwordCandidates = newArrayList("password", "pwd", "passwd", "motdepasse");
+    private final Iterable<String> enabledCandidates = newArrayList("isenabled", "enabled");
+    private final Iterable<String> roleNameCandidates = newArrayList("authority", "namelocale", "rolename", "role");
 
     /**
      * Is this entity the 'account' entity?
@@ -51,7 +53,7 @@ public class AccountConvention {
         for (Attribute a : e.getAttributes().getList()) {
             if (a.isString() && match(a.getVar(), usernameCandidates) && a.isUnique()) {
                 accountAttributes.setUsername(a);
-                log.debug("'Username' candidate: " + a.getVar() + " found on " + e.getName());
+                log.debug("'Username' candidate: " + a.getVar() + FOUND_ON + e.getName());
                 break;
             }
         }
@@ -64,7 +66,7 @@ public class AccountConvention {
         for (Attribute a : e.getAttributes().getList()) {
             if (a.isString() && match(a.getVar(), passwordCandidates)) {
                 accountAttributes.setPassword(a);
-                log.debug("'Password' candidate: " + a.getVar() + " found on " + e.getName());
+                log.debug("'Password' candidate: " + a.getVar() + FOUND_ON + e.getName());
                 break;
             }
         }
@@ -76,25 +78,30 @@ public class AccountConvention {
         // from here we have at least an account.
         e.setAccountAttributes(accountAttributes);
 
-        // 3- detect optional email
+        detectOptionalAccountAttributes(e, accountAttributes);
+        detectRoleRelation(e, accountAttributes);
+        return true;
+    }
+
+    private void detectOptionalAccountAttributes(Entity e, AccountAttributes accountAttributes) {
         for (Attribute a : e.getAttributes().getList()) {
             if (a.isString() && match(a.getVar(), emailCandidates)) {
                 accountAttributes.setEmail(a);
-                log.debug("'Email' candidate: " + a.getVar() + " found on " + e.getName());
+                log.debug("'Email' candidate: " + a.getVar() + FOUND_ON + e.getName());
                 break;
             }
         }
 
-        // 4- detect optional enabled
         for (Attribute a : e.getAttributes().getList()) {
             if (a.isBoolean() && match(a.getVar(), enabledCandidates)) {
                 accountAttributes.setEnabled(a);
-                log.debug("'Enabled' candidate: " + a.getVar() + " found on " + e.getName());
+                log.debug("'Enabled' candidate: " + a.getVar() + FOUND_ON + e.getName());
                 break;
             }
         }
+    }
 
-        // 5- detect Role relation
+    private void detectRoleRelation(Entity e, AccountAttributes accountAttributes) {
         for (Relation relation : e.getXToMany().getList()) {
             RoleAttributes roleAttributes = getRoleEntity(relation.getToEntity());
 
@@ -105,8 +112,6 @@ public class AccountConvention {
                 break;
             }
         }
-
-        return true;
     }
 
     public RoleAttributes getRoleEntity(Entity e) {

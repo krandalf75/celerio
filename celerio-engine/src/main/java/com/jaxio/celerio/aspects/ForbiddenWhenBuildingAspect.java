@@ -32,9 +32,7 @@ public class ForbiddenWhenBuildingAspect {
 
     public void checkNotForbidden() {
         if (isBuilding) {
-            IllegalStateException ise = new IllegalStateException("Called a " + ForbiddenWhenBuilding.class.getSimpleName() + " method while building");
-            ise.printStackTrace();
-            throw ise;
+            throw new IllegalStateException("Called a " + ForbiddenWhenBuilding.class.getSimpleName() + " method while building");
         }
     }
 

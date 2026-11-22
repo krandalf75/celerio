@@ -27,4 +27,16 @@ public class Generation {
     public String getModelBasePrefix() {
         return modelBasePrefix;
     }
+
+    public void setModelBasePrefix(String modelBasePrefix) {
+        this.modelBasePrefix = modelBasePrefix;
+    }
+
+    public void setUseMavenCelerioPlugin(boolean useMavenCelerioPlugin) {
+        this.useMavenCelerioPlugin = useMavenCelerioPlugin;
+    }
+
+    public boolean isUseMavenCelerioPlugin() {
+        return useMavenCelerioPlugin;
+    }
 }

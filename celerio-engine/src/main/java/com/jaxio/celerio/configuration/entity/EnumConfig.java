@@ -63,7 +63,7 @@ public class EnumConfig {
         return hasLength(rootPackage);
     }
 
-    /*
+    /**
      * When you define a sub-package, the resulting enum's package becomes <code>rootPackage.domain.subPackage</code> instead of <code>rootPackage.domain</code>.
      * Same applies for other enum related classes. There is no sub-package by default.
      */

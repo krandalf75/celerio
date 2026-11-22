@@ -34,6 +34,8 @@ import static com.jaxio.celerio.model.support.jpa.JpaConfigHelper.*;
 
 public class JpaToOneRelation extends AbstractRelationSpi {
 
+    private static final String JOIN_COLUMN_ANNOTATION = "@JoinColumn";
+
     @Override
     public boolean compatibleWith(Relation relation) {
         return (relation.isManyToOne() || relation.isOneToOne()) && !relation.isIntermediate();
@@ -51,7 +53,7 @@ public class JpaToOneRelation extends AbstractRelationSpi {
 
     public List<String> getAnnotations() {
         if (relation.isComposite() && !relation.isManyToOne()) {
-            return Arrays.asList("// TODO: composite one to one");
+            return Arrays.asList("// Composite one-to-one associations are currently generated without JPA annotations.");
         }
         AnnotationBuilder ab = new AnnotationBuilder();
 
@@ -119,15 +121,10 @@ public class JpaToOneRelation extends AbstractRelationSpi {
     }
 
     private String getJoinColumnAnnotation(Attribute fromAttribute, Attribute toAttribute) {
-//    TODO: investigate why it does not work!, it should according to doc
-//          http://webdev.apl.jhu.edu/~jcs/ejava-javaee/coursedocs/605-784-site/docs/content/html/jpa-relationex-one2one.html#jpa-relationex-o2o-uni-mapsid
-//
-//        if (hasMapsIdAnnotation()) {
-//            return ""; // not needed.
-//        }
+        // Shared primary-key mappings also need the join column alongside @MapsId.
         AttributeBuilder ab = getJoinColumnAttributes(fromAttribute, toAttribute);
         addImport("javax.persistence.JoinColumn");
-        return ab.bindAttributesTo("@JoinColumn");
+        return ab.bindAttributesTo(JOIN_COLUMN_ANNOTATION);
     }
 
     private String getJoinColumnsAnnotation(List<AttributePair> attributePairs) {
@@ -137,8 +134,7 @@ public class JpaToOneRelation extends AbstractRelationSpi {
         List<String> ab = newArrayList();
         for (AttributePair pair : attributePairs) {
             AttributeBuilder joinBuilder = getJoinColumnAttributes(pair.getFromAttribute(), pair.getToAttribute());
-            joinBuilder.bindAttributesTo("@JoinColumn");
-            ab.add(joinBuilder.bindAttributesTo("@JoinColumn"));
+            ab.add(joinBuilder.bindAttributesTo(JOIN_COLUMN_ANNOTATION));
         }
 
         AttributeBuilder joinsBuilder = new AttributeBuilder();
@@ -149,7 +145,7 @@ public class JpaToOneRelation extends AbstractRelationSpi {
     private AttributeBuilder getJoinColumnAttributes(Attribute fromAttribute, Attribute toAttribute) {
         return new AttributeBuilder( //
                 getJoinColumnName(fromAttribute), //
-                getJoinReferencedColumnName(fromAttribute, toAttribute), //
+                getJoinReferencedColumnName(toAttribute), //
                 getNullable(fromAttribute), //
                 getUnique(fromAttribute), //
                 getJoinColumnInsertable(fromAttribute), //
@@ -160,16 +156,10 @@ public class JpaToOneRelation extends AbstractRelationSpi {
         return "name = \"" + fromAttribute.getColumnNameEscaped() + "\"";
     }
 
-    private String getJoinReferencedColumnName(Attribute from, Attribute toAttribute) {
-        if (relation.isSimple()) {
-            if (toAttribute.isInPk()) {
-                return null; // convention, not needed
-            } else {
-                return "referencedColumnName = \"" + toAttribute.getColumnNameEscaped() + "\"";
-            }
+    private String getJoinReferencedColumnName(Attribute toAttribute) {
+        if (relation.isSimple() && toAttribute.isInPk()) {
+            return null; // JPA defaults a simple reference to the primary-key column.
         }
-
-        // composite => set it in all cases
         return "referencedColumnName = \"" + toAttribute.getColumnNameEscaped() + "\"";
     }
 

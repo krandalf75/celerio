@@ -30,7 +30,6 @@ import com.jaxio.celerio.output.OutputResult;
 import com.jaxio.celerio.output.OutputResultFactory;
 import com.jaxio.celerio.template.pack.PackLoader;
 import org.apache.commons.lang.StringUtils;
-import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
@@ -38,16 +37,11 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.FileUtils;
-import org.codehaus.plexus.util.StringInputStream;
-import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.oxm.XmlMappingException;
 
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.Iterator;
 import java.util.List;
 
 import static org.apache.commons.io.FilenameUtils.normalize;
@@ -382,9 +376,9 @@ public class GenerateMojo extends AbstractMojo {
     }
 
 
-    private static <T> boolean isNull(T... ts) {
-        for (T t : ts) {
-            if (t == null) {
+    private static boolean isNull(Object... values) {
+        for (Object value : values) {
+            if (value == null) {
                 return true;
             }
         }

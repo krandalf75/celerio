@@ -26,5 +26,6 @@ import javax.xml.bind.annotation.XmlAttribute;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class Value {
     @XmlAttribute(name = "value")
+    @SuppressWarnings("java:S1700") // Keep the schema property and its Lombok accessors named value.
     private String value;
 }

@@ -107,8 +107,8 @@ public class EnumValue {
     }
 
     public Labels labels() {
-        Labels labels = new Labels(getLabels());
-        labels.setFallBack(fallBack(getLabel(), toReadableLabel(fallBack(getName(), getValue()))));
-        return labels;
+        Labels localizedLabels = new Labels(getLabels());
+        localizedLabels.setFallBack(fallBack(getLabel(), toReadableLabel(fallBack(getName(), getValue()))));
+        return localizedLabels;
     }
 }

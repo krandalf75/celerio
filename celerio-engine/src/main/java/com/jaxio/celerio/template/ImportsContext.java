@@ -22,6 +22,9 @@ package com.jaxio.celerio.template;
  */
 public class ImportsContext {
 
+    private ImportsContext() {
+    }
+
     private static final InheritableThreadLocal<ImportsHolder> currentImportsHolder = new InheritableThreadLocal<ImportsHolder>();
     private static final InheritableThreadLocal<Boolean> isExtendedByUser = new InheritableThreadLocal<Boolean>();
     private static final InheritableThreadLocal<Boolean> jakartaNamespace = new InheritableThreadLocal<Boolean>() {

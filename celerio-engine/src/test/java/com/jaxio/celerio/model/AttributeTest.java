@@ -25,7 +25,7 @@ import static org.fest.assertions.Assertions.assertThat;
 public class AttributeTest {
 
     @Test
-    public void testSortableAndLazyLoaded() throws Exception {
+    public void testSortableAndLazyLoaded() {
         Attribute a = new Attribute();
         ColumnConfig cc = new ColumnConfig();
         cc.setType(JdbcType.BLOB);

@@ -17,39 +17,46 @@
 package com.jaxio.celerio.support;
 
 import com.jaxio.celerio.util.StringUtil;
+import lombok.AccessLevel;
 import lombok.Getter;
 
 @Getter
 public class AccessorNamer extends AbstractNamer {
-    private String var;
+    @Getter(AccessLevel.NONE)
+    private final String propertyName;
     private String vars;
-    private String type;
-    private String packageName;
+    private final String type;
+    private final String packageName;
 
     public AccessorNamer(Namer namer) {
-        this.var = StringUtil.escape(namer.getVar());
+        this.propertyName = StringUtil.escape(namer.getVar());
         this.type = namer.getType();
         this.packageName = namer.getPackageName();
     }
 
-    public AccessorNamer(Namer namer, String var) {
-        this.var = StringUtil.escape(var);
+    public AccessorNamer(Namer namer, String propertyName) {
+        this.propertyName = StringUtil.escape(propertyName);
         this.type = namer.getType();
         this.packageName = namer.getPackageName();
     }
 
-    public AccessorNamer(Namer namer, String var, String vars) {
-        this.var = StringUtil.escape(var);
+    public AccessorNamer(Namer namer, String propertyName, String vars) {
+        this.propertyName = StringUtil.escape(propertyName);
         this.vars = StringUtil.escape(vars);
         this.type = namer.getType();
         this.packageName = namer.getPackageName();
     }
 
     // used for tests
-    public AccessorNamer(String var, String type, String packageName) {
-        this.var = StringUtil.escape(var);
+    public AccessorNamer(String propertyName, String type, String packageName) {
+        this.propertyName = StringUtil.escape(propertyName);
         this.type = type;
         this.packageName = packageName;
+    }
+
+    @Override
+    public String getVar() {
+        return propertyName;
     }
 
     @Override

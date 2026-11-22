@@ -22,7 +22,7 @@ import java.util.List;
 
 public class MysqlEnumValuesExtractor {
     private static final String MYSQL_ENUM_VALUES = "[e|E][n|N][u|U][m|M]\\((.*)\\)$";
-    private EnumExtractor enumExtractor = new EnumExtractor(MYSQL_ENUM_VALUES);
+    private final EnumExtractor enumExtractor = new EnumExtractor(MYSQL_ENUM_VALUES);
 
     public List<String> extract(String content) {
         return enumExtractor.extract(content);

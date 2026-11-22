@@ -23,7 +23,7 @@ import com.jaxio.celerio.model.Entity;
  * create a subpackage with then entity name.
  */
 public class DomainSubpackageClassNamer extends ClassNamer {
-    private Entity entity;
+    private final Entity entity;
 
     public DomainSubpackageClassNamer(Entity entity, ClassType classType) {
         super(entity, classType);

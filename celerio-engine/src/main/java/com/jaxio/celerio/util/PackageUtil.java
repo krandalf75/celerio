@@ -24,31 +24,26 @@ import static org.apache.commons.lang.StringUtils.stripToNull;
 
 public class PackageUtil {
 
-    static public String assemblePackage(String... packageChunks) {
+    private PackageUtil() {
+    }
+
+    public static String assemblePackage(String... packageChunks) {
         StringBuilder sb = new StringBuilder();
 
         for (String packageChunk : packageChunks) {
             if (stripToNull(packageChunk) != null) {
-                if (sb.length() > 0) {
+                if (!sb.isEmpty()) {
                     sb.append(".");
                 }
                 sb.append(packageChunk.trim());
             }
         }
 
-        Validate.isTrue(sb.length() > 0, "An assembled package is null or empty!");
+        Validate.isTrue(!sb.isEmpty(), "An assembled package is null or empty!");
         return sb.toString();
     }
 
     public static boolean isPackageNameValid(String packageName) {
-        if (!SourceVersion.isName(packageName)) {
-            return false;
-        }
-
-        if (packageName.startsWith("java")) {
-            return false;
-        }
-
-        return true;
+        return SourceVersion.isName(packageName) && !packageName.startsWith("java");
     }
 }

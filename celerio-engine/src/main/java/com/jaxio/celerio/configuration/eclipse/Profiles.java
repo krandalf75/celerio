@@ -34,5 +34,13 @@ public class Profiles {
     private String version;
 
     @XmlElement(name = "profile")
-    private List<Profile> profiles;
+    private List<Profile> profileList;
+
+    public List<Profile> getProfiles() {
+        return profileList;
+    }
+
+    public void setProfiles(List<Profile> profiles) {
+        profileList = profiles;
+    }
 }

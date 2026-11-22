@@ -28,17 +28,17 @@ public enum MappedType {
     M_BIGDECIMAL("BigDecimal", "java.math.BigDecimal"), //
     M_BIGINTEGER("BigInteger", "java.math.BigInteger"), //
     M_BOOLEAN("Boolean", "java.lang.Boolean"), //
-    M_BYTES("byte[]", "java.lang.Byte"), //
+    M_BYTES("byte[]", Byte.class.getName()), //
     M_CLOB("String", "java.lang.String"), //
     M_DOUBLE("Double", "java.lang.Double"), //
     M_FLOAT("Float", "java.lang.Float"), //
-    M_BLOB("byte[]", "java.lang.Byte"), //
+    M_BLOB("byte[]", Byte.class.getName()), //
     M_INTEGER("Integer", "java.lang.Integer"), //
     M_LONG("Long", "java.lang.Long"), //
     M_REF("Ref", "java.sql.Ref"), //
     M_STRING("String", "java.lang.String"), //
     M_CHAR("Character", "java.lang.Character"), //
-    M_BYTE("Byte", "java.lang.Byte"), //
+    M_BYTE("Byte", Byte.class.getName()), //
     M_LOCALDATE("LocalDate", "java.time.LocalDate"), //
     M_LOCALDATETIME("LocalDateTime", "java.time.LocalDateTime"), //
     M_ZONEDDATETIME("ZonedDateTime", "java.time.ZonedDateTime"),
@@ -79,10 +79,7 @@ public enum MappedType {
 
     public boolean isSupportedType() {
         switch (this) {
-            case M_ARRAY:
-            case M_OBJECT:
-            case M_REF:
-            case M_URL:
+            case M_ARRAY, M_OBJECT, M_REF, M_URL:
                 return false;
             default:
                 return true;
@@ -91,12 +88,7 @@ public enum MappedType {
 
     public boolean isNumeric() {
         switch (this) {
-            case M_BIGDECIMAL:
-            case M_BIGINTEGER:
-            case M_DOUBLE:
-            case M_FLOAT:
-            case M_INTEGER:
-            case M_LONG:
+            case M_BIGDECIMAL, M_BIGINTEGER, M_DOUBLE, M_FLOAT, M_INTEGER, M_LONG:
                 return true;
             default:
                 return false;
@@ -115,11 +107,11 @@ public enum MappedType {
         return this == M_BIGINTEGER;
     }
 
-    final public boolean isFloat() {
+    public final boolean isFloat() {
         return this == M_FLOAT;
     }
 
-    final public boolean isDouble() {
+    public final boolean isDouble() {
         return this == M_DOUBLE;
     }
 
@@ -154,14 +146,7 @@ public enum MappedType {
 
     public boolean isDate() {
         switch (this) {
-            case M_SQLDATE:
-            case M_UTILDATE:
-            case M_TIME:
-            case M_TIMESTAMP:
-            case M_LOCALDATE:
-            case M_LOCALDATETIME:
-            case M_ZONEDDATETIME:
-            case M_INSTANT:
+            case M_SQLDATE, M_UTILDATE, M_TIME, M_TIMESTAMP, M_LOCALDATE, M_LOCALDATETIME, M_ZONEDDATETIME, M_INSTANT:
                 return true;
             default:
                 return false;
@@ -206,29 +191,9 @@ public enum MappedType {
 
     public boolean isComparable() {
         switch (this) {
-            case M_BIGDECIMAL:
-            case M_BIGINTEGER:
-            case M_BOOLEAN:
-            case M_CLOB:
-            case M_DOUBLE:
-            case M_FLOAT:
-            case M_INTEGER:
-            case M_LONG:
-            case M_STRING:
-            case M_CHAR:
-            case M_BYTE:
-            case M_SQLDATE:
-            case M_UTILDATE:
-            case M_INSTANT:
+            case M_BIGDECIMAL, M_BIGINTEGER, M_BOOLEAN, M_CLOB, M_DOUBLE, M_FLOAT, M_INTEGER, M_LONG, M_STRING, M_CHAR, M_BYTE, M_SQLDATE, M_UTILDATE, M_INSTANT:
                 return true;
-            case M_TIME:
-            case M_REF:
-            case M_BLOB:
-            case M_BYTES:
-            case M_ARRAY:
-            case M_TIMESTAMP:
-            case M_URL:
-            case M_OBJECT:
+            case M_TIME, M_REF, M_BLOB, M_BYTES, M_ARRAY, M_TIMESTAMP, M_URL, M_OBJECT:
             default:
                 return false;
         }
@@ -239,90 +204,31 @@ public enum MappedType {
             return null;
         }
 
-        switch (this) {
-            case M_STRING:
-                return "\"" + value.replace("\"", "\\\"") + "\"";
-            case M_BOOLEAN:
-                return toBoolean(value) ? "true" : "false";
-            case M_BIGINTEGER:
-                return "BigInteger.valueOf(" + value + ")";
-            case M_INTEGER:
-                try {
-                    return (new Integer(value)).toString();
-                } catch (Exception e) {
-                    break;
-                }
-            case M_LONG:
-                try {
-                    return (new Long(value)).toString() + "L";
-                } catch (Exception e) {
-                    break;
-                }
-            case M_DOUBLE:
-                try {
-                    return (new Double(value)).toString() + "d";
-                } catch (Exception e) {
-                    break;
-                }
-            case M_SQLDATE:
-            case M_UTILDATE:
-            case M_TIME:
-            case M_TIMESTAMP:
-                value = value.toUpperCase();
-                if (isCurrentDate(value)) {
-                    return "new Date()";
-                } else {
-                    break;
-                }
-            case M_LOCALDATE:
-                value = value.toUpperCase();
-                if (isCurrentDate(value)) {
-                    return "LocalDate.now()";
-                } else {
-                    break;
-                }
-            case M_LOCALDATETIME:
-                value = value.toUpperCase();
-                if (isCurrentDate(value)) {
-                    return "LocalDateTime.now()";
-                } else {
-                    break;
-                }
-            case M_ZONEDDATETIME:
-                value = value.toUpperCase();
-                if (isCurrentDate(value)) {
-                    return "ZonedDateTime.now()";
-                } else {
-                    break;
-                }
-            case M_INSTANT:
-                value = value.toUpperCase();
-                if (isCurrentDate(value)) {
-                    return "Instant.now()";
-                } else {
-                    break;
-                }
-            case M_ARRAY:
-            case M_BIGDECIMAL:
-            case M_BYTES:
-            case M_CLOB:
-            case M_FLOAT:
-            case M_BLOB:
-            case M_REF:
-            case M_CHAR:
-            case M_BYTE:
-            case M_URL:
-            case M_OBJECT:
-            default:
-                return null;
+        try {
+            return switch (this) {
+                case M_STRING -> "\"" + value.replace("\"", "\\\"") + "\"";
+                case M_BOOLEAN -> Boolean.toString(toBoolean(value));
+                case M_BIGINTEGER -> "BigInteger.valueOf(" + value + ")";
+                case M_INTEGER -> Integer.toString(Integer.parseInt(value));
+                case M_LONG -> Long.parseLong(value) + "L";
+                case M_DOUBLE -> Double.parseDouble(value) + "d";
+                case M_SQLDATE, M_UTILDATE, M_TIME, M_TIMESTAMP -> dateExpression(value, "new Date()");
+                case M_LOCALDATE, M_LOCALDATETIME, M_ZONEDDATETIME, M_INSTANT -> dateExpression(value, getJavaType() + ".now()");
+                default -> null;
+            };
+        } catch (NumberFormatException _) {
+            return null;
         }
-        return null;
     }
 
-    private List<String> isNow = newArrayList("now()", "sysdate", "current_time");
+    private String dateExpression(String value, String expression) {
+        return isCurrentDate(value.toUpperCase()) ? expression : null;
+    }
+
+    private final List<String> isNow = newArrayList("now()", "sysdate", "current_time");
 
     private boolean isCurrentDate(String value) {
-        return value == null ? false : isNow.contains(value.toLowerCase());
+        return value != null && isNow.contains(value.toLowerCase());
     }
 
     public String getJavaDefinition(String value) {
@@ -333,32 +239,15 @@ public enum MappedType {
                 return "Boolean.valueOf(" + value + ")";
             case M_BIGINTEGER:
                 return "BigInteger.valueOf(" + value + ")";
-            case M_INTEGER:
-            case M_LONG:
-            case M_FLOAT:
-            case M_DOUBLE:
-            case M_CLOB:
-            case M_CHAR:
-            case M_BYTE:
-            case M_BIGDECIMAL:
+            case M_INTEGER, M_LONG, M_FLOAT, M_DOUBLE, M_CLOB, M_CHAR, M_BYTE, M_BIGDECIMAL:
                 return "new " + this.getJavaType() + "(" + value + ")";
-            case M_BLOB:
-            case M_BYTES:
+            case M_BLOB, M_BYTES:
                 return value + ".getBytes()";
-            case M_SQLDATE:
-            case M_UTILDATE:
-            case M_TIME:
-            case M_TIMESTAMP:
+            case M_SQLDATE, M_UTILDATE, M_TIME, M_TIMESTAMP:
                 return "new " + this.getFullJavaType() + "(Long.parseLong(" + value + "))";
-            case M_LOCALDATETIME:
-            case M_LOCALDATE:
-            case M_ZONEDDATETIME:
-            case M_INSTANT:
+            case M_LOCALDATETIME, M_LOCALDATE, M_ZONEDDATETIME, M_INSTANT:
                 return this.getFullJavaType() + ".parse(" + value + ")";
-            case M_ARRAY:
-            case M_REF:
-            case M_URL:
-            case M_OBJECT:
+            case M_ARRAY, M_REF, M_URL, M_OBJECT:
             default:
                 throw new IllegalArgumentException("getJavaDefinition for " + this.name() + " is not implemented yet");
         }
@@ -388,7 +277,7 @@ public enum MappedType {
         } else if (isLong()) {
             return "org.hibernate.type.LongType";
         } else {
-            throw new RuntimeException(this + " is not support for hibernate types");
+            throw new UnsupportedOperationException(this + " does not support Hibernate types");
         }
     }
 
@@ -397,7 +286,7 @@ public enum MappedType {
         if (fullType.startsWith("java.lang")) {
             return true;
         }
-        String[] nativeTypes = new String[]{"boolean", "byte", "char", "short", "int", "float", "double", "void"};
+        String[] nativeTypes = {"boolean", "byte", "char", "short", "int", "float", "double", "void"};
         for (String nativeType : nativeTypes) {
             if (fullType.startsWith(nativeType)) {
                 return true;

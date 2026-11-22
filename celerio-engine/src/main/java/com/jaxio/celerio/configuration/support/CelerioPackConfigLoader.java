@@ -26,9 +26,12 @@ import org.springframework.stereotype.Service;
 @Service
 public class CelerioPackConfigLoader extends AbstractJibxLoader<CelerioPack> {
 
+    private final Marshaller marshaller;
+
     @Autowired
-    @Qualifier("celerioPackMarshaller")
-    private Marshaller marshaller;
+    public CelerioPackConfigLoader(@Qualifier("celerioPackMarshaller") Marshaller marshaller) {
+        this.marshaller = marshaller;
+    }
 
     public Marshaller getMarshaller() {
         return marshaller;

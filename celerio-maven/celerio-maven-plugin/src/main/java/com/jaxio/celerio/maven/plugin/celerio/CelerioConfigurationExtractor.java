@@ -23,7 +23,7 @@ public class CelerioConfigurationExtractor {
 
     public static String CELERIO_XML_START = "<celerio xmlns=\"http://www.jaxio.com/schema/celerio\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.jaxio.com/schema/prototype/celerio http://www.jaxio.com/schema/prototype/celerio-2.6.xsd\">";
     public static String CELERIO_XML_END = "</celerio>";
-    private String pluginXmlConfiguration;
+    private final String pluginXmlConfiguration;
 
     public CelerioConfigurationExtractor(String pluginXmlConfiguration) {
         this.pluginXmlConfiguration = pluginXmlConfiguration;
@@ -61,8 +61,8 @@ public class CelerioConfigurationExtractor {
         if (celerio == null) {
             return null;
         }
-        celerio = celerio.replaceAll("<celerio:", "<");
-        celerio = celerio.replaceAll("</celerio:", "</");
+        celerio = celerio.replace("<celerio:", "<");
+        celerio = celerio.replace("</celerio:", "</");
 
         return CELERIO_XML_START + celerio + CELERIO_XML_END;
     }

@@ -27,10 +27,14 @@ import static com.google.common.base.Predicates.and;
 import static com.google.common.collect.Lists.newArrayList;
 import static com.jaxio.celerio.model.support.AttributePredicates.*;
 
+@SuppressWarnings({"java:S4738", "java:S2386"}) // Preserve the predicate and convention-list API used by template packs.
 public class SuffixPrefixPredicates {
 
-    private static abstract class PatternPredicate implements Predicate<Attribute> {
-        private Iterable<String> patterns;
+    private SuffixPrefixPredicates() {
+    }
+
+    private abstract static class PatternPredicate implements Predicate<Attribute> {
+        private final Iterable<String> patterns;
 
         public PatternPredicate(Iterable<String> patterns) {
             this.patterns = patterns;
@@ -40,8 +44,6 @@ public class SuffixPrefixPredicates {
             return patterns;
         }
 
-        @Override
-        public abstract boolean apply(Attribute input);
     }
 
     public static class HasSuffixPredicate extends PatternPredicate {
@@ -51,10 +53,7 @@ public class SuffixPrefixPredicates {
 
         @Override
         public boolean apply(Attribute input) {
-            if (MiscUtil.endsWithIgnoreCase(input.getColumnConfig().getFieldName(), getPatterns())) {
-                return true;
-            }
-            return false;
+            return MiscUtil.endsWithIgnoreCase(input.getColumnConfig().getFieldName(), getPatterns());
         }
     }
 
@@ -65,15 +64,12 @@ public class SuffixPrefixPredicates {
 
         @Override
         public boolean apply(Attribute input) {
-            if (MiscUtil.contains(input.getColumnName(), getPatterns())) {
-                return true;
-            }
-            return false;
+            return MiscUtil.contains(input.getColumnName(), getPatterns());
         }
     }
 
     public static class ColumnNameEqualsPredicate implements Predicate<Attribute> {
-        private Iterable<String> matches;
+        private final Iterable<String> matches;
 
         public ColumnNameEqualsPredicate(Iterable<String> matches) {
             this.matches = matches;
@@ -120,8 +116,9 @@ public class SuffixPrefixPredicates {
     }
 
     public static class AttributeShareSameSuffix implements Predicate<Attribute> {
-        private Attribute attribute;
+        private final Attribute attribute;
 
+        @SuppressWarnings("java:S6832") // The model constructs this predicate directly.
         public AttributeShareSameSuffix(Attribute attribute) {
             this.attribute = attribute;
         }

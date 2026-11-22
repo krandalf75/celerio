@@ -21,6 +21,8 @@ import com.jaxio.celerio.support.AccessorNamer;
 import com.jaxio.celerio.support.Namer;
 import org.junit.Test;
 
+import java.util.Map;
+
 import static org.fest.assertions.Assertions.assertThat;
 
 public class RelationCollisionUtilTest {
@@ -30,42 +32,13 @@ public class RelationCollisionUtilTest {
     // ----------------------------------
 
     @Test
-    public void xToOneNamerByConventionId() {
-        RelationCollisionUtil relationUtil = new RelationCollisionUtil();
-        String fromEntityName = "Account";
-        String fromAttributeVar = "myAddressId";
-        Namer targetEntityNamer = getNamer("address", "Address");
-
-        Namer result = relationUtil.getXToOneNamerByConvention(null, fromEntityName, fromAttributeVar, targetEntityNamer);
-
-        assertThat(result.getVar()).isEqualTo("myAddress");
-        assertThat(result.getType()).isEqualTo("Address");
-    }
-
-    @Test
-    public void xToOneNamerByConventionRef() {
-        RelationCollisionUtil relationUtil = new RelationCollisionUtil();
-        String fromEntityName = "Account";
-        String fromAttributeVar = "address";
-        Namer targetEntityNamer = getNamer("address", "Address");
-
-        Namer result = relationUtil.getXToOneNamerByConvention(null, fromEntityName, fromAttributeVar, targetEntityNamer);
-
-        assertThat(result.getVar()).isEqualTo("address");
-        assertThat(result.getType()).isEqualTo("Address");
-    }
-
-    @Test
-    public void xToOneNamerByConventionAny() {
-        RelationCollisionUtil relationUtil = new RelationCollisionUtil();
-        String fromEntityName = "Account";
-        String fromAttributeVar = "anythingElse";
-        Namer targetEntityNamer = getNamer("address", "Address");
-
-        Namer result = relationUtil.getXToOneNamerByConvention(null, fromEntityName, fromAttributeVar, targetEntityNamer);
-
-        assertThat(result.getVar()).isEqualTo("anythingElse");
-        assertThat(result.getType()).isEqualTo("Address");
+    public void xToOneNamerByConvention() {
+        Namer target = getNamer("address", "Address");
+        for (var example : Map.of("myAddressId", "myAddress", "address", "address", "anythingElse", "anythingElse").entrySet()) {
+            Namer result = new RelationCollisionUtil().getXToOneNamerByConvention(null, "Account", example.getKey(), target);
+            assertThat(result.getVar()).isEqualTo(example.getValue());
+            assertThat(result.getType()).isEqualTo("Address");
+        }
     }
 
     @Test
@@ -144,14 +117,14 @@ public class RelationCollisionUtilTest {
     // MANY TO MANY
     // ----------------------------------
 
-    private OneToManyConfig getOneToManyConfig(String elementVar, String var) {
+    private OneToManyConfig getOneToManyConfig(String elementVar, String propertyName) {
         OneToManyConfig o2m = new OneToManyConfig();
         o2m.setElementVar(elementVar);
-        o2m.setVar(var);
+        o2m.setVar(propertyName);
         return o2m;
     }
 
-    private Namer getNamer(String var, String type) {
-        return new AccessorNamer(var, type, "com.mycomp");
+    private Namer getNamer(String propertyName, String type) {
+        return new AccessorNamer(propertyName, type, "com.mycomp");
     }
 }

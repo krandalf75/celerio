@@ -30,9 +30,9 @@ import static com.google.common.collect.Sets.newTreeSet;
  * imports from the current package.
  */
 public class ImportsHolder {
-    private String currentPackage;
-    private Set<PackageImport> imports = newTreeSet();
-    private Set<PackageImport> samePackageImports = newTreeSet();
+    private final String currentPackage;
+    private final Set<PackageImport> imports = newTreeSet();
+    private final Set<PackageImport> samePackageImports = newTreeSet();
 
     public ImportsHolder(String currentPackage) {
         this.currentPackage = currentPackage.replace("/", ".");
@@ -78,7 +78,7 @@ public class ImportsHolder {
     }
 
     public boolean hasImports() {
-        return imports.size() > 0;
+        return !imports.isEmpty();
     }
 
     public String toJavaImportString() {

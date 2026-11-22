@@ -30,20 +30,28 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
-import java.util.Calendar;
+import java.time.Year;
+import java.time.ZoneId;
 
 @Service
 @Data
 @Slf4j
 public class CelerioProducer {
+    private final ProjectFactory projectFactory;
+    private final Config config;
+    private final TemplateEngine templateEngine;
+    private final PackLoader packLoader;
+
     @Autowired
-    private ProjectFactory projectFactory;
-    @Autowired
-    private Config config;
-    @Autowired
-    private TemplateEngine templateEngine;
-    @Autowired
-    private PackLoader packLoader;
+    public CelerioProducer(ProjectFactory projectFactory,
+                           Config config,
+                           TemplateEngine templateEngine,
+                           PackLoader packLoader) {
+        this.projectFactory = projectFactory;
+        this.config = config;
+        this.templateEngine = templateEngine;
+        this.packLoader = packLoader;
+    }
     @Value("${pom.version:unknown}")
     private String version;
     @Value("${release.info:unknown}")
@@ -90,7 +98,7 @@ public class CelerioProducer {
         // http://ascii.mastervb.net/
         // font : varsity.ftl
         Brand brand = new Brand();
-        int currentYear = Calendar.getInstance().get(Calendar.YEAR);
+        int currentYear = Year.now(ZoneId.systemDefault()).getValue();
         log.info("-----------------------------------------------------------------------");
         log.info("        ______         __                  _          ");
         log.info("      .' ___  |       [  |                (_)         ");

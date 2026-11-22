@@ -34,8 +34,8 @@ import static org.apache.commons.lang.WordUtils.capitalize;
  */
 public class ClassNamer2 extends AbstractNamer {
 
-    private String type;
-    private String packageName;
+    private final String type;
+    private final String packageName;
 
     public ClassNamer2(Entity entity, String rootPackage, String subPackage, String prefix, String suffix) {
         Assert.notNull(entity);

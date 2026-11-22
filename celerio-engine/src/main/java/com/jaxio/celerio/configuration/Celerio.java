@@ -84,7 +84,10 @@ public class Celerio {
         return null;
     }
 
-    // TODO: there may be several entities per table!!!
+    /**
+     * Returns the first configuration in declaration order for this table.
+     * Use the entity name to select a specific configuration when a table maps to several entities.
+     */
     public EntityConfig getEntityConfigByTableName(String tableName) {
         for (EntityConfig entityConfig : entityConfigs) {
             if (tableName.equalsIgnoreCase(entityConfig.getTableName())) {

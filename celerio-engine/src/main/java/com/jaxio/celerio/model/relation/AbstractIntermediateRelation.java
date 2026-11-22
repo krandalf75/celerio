@@ -26,18 +26,18 @@ import lombok.Getter;
 
 @Getter
 public abstract class AbstractIntermediateRelation extends AbstractRelation {
-    private Entity middleEntity;
-    private Relation middleToLeft;
-    private Relation middleToRight;
-    private Entity fromEntity;
-    private Entity toEntity;
-    private Namer from;
-    private Namer to;
-    private Namer middle;
+    private final Entity middleEntity;
+    private final Relation middleToLeft;
+    private final Relation middleToRight;
+    private final Entity fromEntity;
+    private final Entity toEntity;
+    private final Namer from;
+    private final Namer to;
+    private final Namer middle;
     private Relation inverse;
     private AssociationDirection associationDirection;
 
-    public AbstractIntermediateRelation(Namer from, Namer to, Entity middleEntity, Relation middleToLeft, Relation middleToRight) {
+    protected AbstractIntermediateRelation(Namer from, Namer to, Entity middleEntity, Relation middleToLeft, Relation middleToRight) {
         this.middleEntity = middleEntity;
         this.middleToLeft = middleToLeft;
         this.middleToRight = middleToRight;
@@ -49,7 +49,7 @@ public abstract class AbstractIntermediateRelation extends AbstractRelation {
     }
 
     @Override
-    final public boolean isIntermediate() {
+    public final boolean isIntermediate() {
         return true;
     }
 

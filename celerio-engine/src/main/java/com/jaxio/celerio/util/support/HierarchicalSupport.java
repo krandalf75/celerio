@@ -19,7 +19,7 @@ package com.jaxio.celerio.util.support;
 import com.jaxio.celerio.util.Hierarchical;
 
 public class HierarchicalSupport<H extends Hierarchical<H>> {
-    private H h;
+    private final H h;
 
     public HierarchicalSupport(H h) {
         this.h = h;
@@ -29,7 +29,7 @@ public class HierarchicalSupport<H extends Hierarchical<H>> {
         if (h.getParent() == null) {
             return h;
         }
-        H parent = h;
+        H parent;
         H current = h;
         do {
             parent = current;

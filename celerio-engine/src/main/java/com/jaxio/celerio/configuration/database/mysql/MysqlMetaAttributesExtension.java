@@ -21,38 +21,40 @@ import com.jaxio.celerio.configuration.database.Column;
 import com.jaxio.celerio.configuration.database.Metadata;
 import com.jaxio.celerio.configuration.database.Table;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.apache.commons.lang.StringUtils.trim;
 
 @Service
 public class MysqlMetaAttributesExtension extends MysqlExtension {
+    private static final String COLUMN_DETAILS = """
+            SELECT COLUMN_NAME, COLUMN_TYPE, EXTRA
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = COALESCE(?, DATABASE()) AND TABLE_NAME = ?
+            ORDER BY ORDINAL_POSITION
+            """;
 
     @Override
     public void apply(Connection connection, Metadata metadata) {
         JdbcTemplate jdbcTemplate = getJdbcTemplate(connection);
         for (Table table : metadata.getTables()) {
-            processYearTypes(jdbcTemplate, metadata, table);
+            processColumnDetails(jdbcTemplate, table);
         }
     }
 
-    private void processYearTypes(JdbcTemplate jdbcTemplate, final Metadata metadata, final Table table) {
-        jdbcTemplate.query("show columns from " + table.getName(), new RowMapper<Void>() {
-            @Override
-            public Void mapRow(ResultSet rs, int rowNum) throws SQLException {
-                Column column = table.getColumnByName(rs.getString("Field"));
-                column.addMetaAttribute(new MetaAttribute("type", rs.getString("Type")));
-                String extra = rs.getString("Extra");
-                if (isNotBlank(extra)) {
-                    column.addMetaAttribute(new MetaAttribute("extra", trim(extra)));
-                }
-                return null;
+    private void processColumnDetails(JdbcTemplate jdbcTemplate, Table table) {
+        jdbcTemplate.query(COLUMN_DETAILS, new Object[]{table.getCatalog(), table.getName()}, rs -> {
+            Column column = table.getColumnByName(rs.getString("COLUMN_NAME"));
+            if (column == null) {
+                return;
+            }
+            column.addMetaAttribute(new MetaAttribute("type", rs.getString("COLUMN_TYPE")));
+            String extra = rs.getString("EXTRA");
+            if (isNotBlank(extra)) {
+                column.addMetaAttribute(new MetaAttribute("extra", trim(extra)));
             }
         });
     }

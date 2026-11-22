@@ -35,9 +35,12 @@ import java.io.IOException;
 @Slf4j
 public class CelerioLoader extends AbstractJibxLoader<Celerio> {
 
+    private final Marshaller marshaller;
+
     @Autowired
-    @Qualifier("celerioMarshaller")
-    private Marshaller marshaller;
+    public CelerioLoader(@Qualifier("celerioMarshaller") Marshaller marshaller) {
+        this.marshaller = marshaller;
+    }
 
     public Marshaller getMarshaller() {
         return marshaller;
@@ -47,11 +50,13 @@ public class CelerioLoader extends AbstractJibxLoader<Celerio> {
         return (Unmarshaller) marshaller;
     }
 
+    @Override
     public Celerio load(String filename) throws XmlMappingException, IOException {
         return load(new File(filename));
 
     }
 
+    @Override
     public Celerio load(File file) throws XmlMappingException, IOException {
         Celerio celerio = load(new FileInputStream(file));
         loadIncludes(file.getParentFile(), celerio);
@@ -76,9 +81,8 @@ public class CelerioLoader extends AbstractJibxLoader<Celerio> {
                 Celerio secondaryCelerio = load(secondaryFile);
                 // we add only the entity configs
                 primaryCelerio.addSecondaryEntityConfigs(secondaryCelerio.getEntityConfigs());
-            } catch (FileNotFoundException e) {
+            } catch (FileNotFoundException _) {
                 log.error("The file " + secondaryFile.getAbsolutePath() + " included in the main celerio configuration file does not exist");
-                continue;
             } catch (IOException e) {
                 log.error("io exception when loading" + secondaryFile.getAbsolutePath() + " included in the main celerio configuration file.");
                 throw new RuntimeException("error", e);

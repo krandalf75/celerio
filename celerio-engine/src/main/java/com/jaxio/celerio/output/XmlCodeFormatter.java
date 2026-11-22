@@ -29,6 +29,7 @@ import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -76,44 +77,24 @@ public class XmlCodeFormatter {
             XMLSerializer serializer = new XMLSerializer(out, format);
             serializer.serialize(document);
             return out.toString();
-        } catch (Exception e) {
-            log.warn("Could not format the content: " + unformattedXml);
-            throw new RuntimeException(e);
+        } catch (ParserConfigurationException e) {
+            throw new IllegalStateException("Could not configure the XML parser", e);
+        } catch (SAXException | IOException e) {
+            log.warn("Could not format XML", e);
+            throw new IllegalArgumentException("Could not format XML", e);
         }
     }
 
-    private Document parseXmlFile(String in) {
-        try {
-            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-            dbf.setValidating(false);
-            dbf.setExpandEntityReferences(false);
+    private Document parseXmlFile(String in) throws ParserConfigurationException, SAXException, IOException {
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newDefaultInstance();
+        dbf.setExpandEntityReferences(false);
+        dbf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        dbf.setFeature("http://apache.org/xml/features/nonvalidating/load-dtd-grammar", false);
+        dbf.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+        dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+        dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
 
-            // prevent dtd download...
-            // http://stackoverflow.com/questions/155101/make-documentbuilder-parse-ignore-dtd-references
-            dbf.setFeature("http://xml.org/sax/features/namespaces", false);
-            dbf.setFeature("http://xml.org/sax/features/validation", false);
-            dbf.setFeature("http://apache.org/xml/features/nonvalidating/load-dtd-grammar", false);
-            dbf.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
-
-            DocumentBuilder db = dbf.newDocumentBuilder();
-
-            // // prevent dtd download...
-            // db.setEntityResolver(new EntityResolver() {
-            // @Override
-            // public InputSource resolveEntity(String publicId, String systemId)
-            // throws SAXException, IOException {
-            // return new InputSource(new StringReader(""));
-            // }
-            // });
-            //
-            InputSource is = new InputSource(new StringReader(in));
-            return db.parse(is);
-        } catch (ParserConfigurationException e) {
-            throw new RuntimeException(e);
-        } catch (SAXException e) {
-            throw new RuntimeException(e);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        DocumentBuilder db = dbf.newDocumentBuilder();
+        return db.parse(new InputSource(new StringReader(in)));
     }
 }

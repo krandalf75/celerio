@@ -26,6 +26,8 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import static com.google.common.collect.Lists.newArrayList;
@@ -34,22 +36,26 @@ import static com.jaxio.celerio.configuration.Util.LOCAL_CELERIO_PACK;
 @Service
 @Slf4j
 public class PackLoader {
-    @Autowired
-    private Config config;
+    private final Config config;
+
+    private final CelerioPackConfigLoader celerioPackConfigLoader;
+
+    private final ClasspathResourceUncryptedPackLoader uncryptedPackLoader;
 
     @Autowired
-    private CelerioPackConfigLoader celerioPackConfigLoader;
-
-    @Autowired
-    private ClasspathResourceUncryptedPackLoader uncryptedPackLoader;
+    public PackLoader(Config config,
+                      CelerioPackConfigLoader celerioPackConfigLoader,
+                      ClasspathResourceUncryptedPackLoader uncryptedPackLoader) {
+        this.config = config;
+        this.celerioPackConfigLoader = celerioPackConfigLoader;
+        this.uncryptedPackLoader = uncryptedPackLoader;
+    }
 
     public List<TemplatePack> getTemplatePacks() {
-        // TODO: pack ordering
         List<TemplatePack> packs = newArrayList();
         addTemplatePacksDefinedInXML(packs);
 
         if (config.getCelerio().getConfiguration().getPacks().isEmpty()) {
-//            addLocalProject(packs);
             addPacksFoundInClassPath(packs);
         }
 
@@ -71,78 +77,56 @@ public class PackLoader {
     }
 
     private void addTemplatePacksDefinedInXML(List<TemplatePack> packs) {
-        List<Pack> packsInConfig = config.getCelerio().getConfiguration().getPacks();
+        List<Pack> packsInConfig = new ArrayList<>(config.getCelerio().getConfiguration().getPacks());
+        packsInConfig.sort(Comparator.comparing(Pack::getOrder, Comparator.nullsLast(Comparator.naturalOrder())));
 
-        for (Pack packInConfig : packsInConfig) {
-            if (!packInConfig.isEnable()) {
-                log.warn("The pack " + packInConfig.getName() + " has been disabled");
-                continue;
+        for (Pack pack : packsInConfig) {
+            if (!pack.isEnable()) {
+                log.warn("The pack " + pack.getName() + " has been disabled");
+            } else if (!pack.hasName()) {
+                log.warn("Found an invalid pack declaration: " + pack);
+            } else if (pack.hasPath()) {
+                addLocalPack(packs, pack);
+            } else {
+                addClasspathPack(packs, pack);
             }
-
-            // pack in local folder
-            if (packInConfig.hasPath() && packInConfig.hasName()) {
-                // the root is the folder that contains both "celerio" folder and "META-INF" folder
-                File packRoot = new File(config.getBaseDir() + File.separatorChar + packInConfig.getPath());
-                if (packRoot.exists()) {
-                    try {
-                        File celerioPackXml = new File(packRoot, LOCAL_CELERIO_PACK);
-                        if (celerioPackXml.exists()) {
-                            CelerioPack celerioPack = celerioPackConfigLoader.load(celerioPackXml);
-                            TemplatePackInfo templatePackInfo = new TemplatePackInfo(celerioPack);
-                            templatePackInfo.overrideProperties(packInConfig.getProperties());
-                            packs.add(new LocalResourcePackFile(templatePackInfo, new File(packRoot, "celerio" + File.separatorChar + celerioPack.getPackName().getValue())));
-                        } else {
-                            log.error("Skipping pack " + packInConfig + " the file " + celerioPackXml.getAbsolutePath() + " is missing");
-                        }
-                    } catch (IOException ioe) {
-                        log.error("Could not load the pack " + packInConfig, ioe);
-                    }
-                } else {
-                    log.warn("The packPath " + packInConfig.getPath() + " for the pack " + packInConfig.getName() + " does not exist!");
-                }
-                continue;
-            }
-
-            // pack in jar on classpath
-            if (!packInConfig.hasPath() && packInConfig.hasName()) {
-                TemplatePack tp = null;
-                try {
-                    tp = getPackFromClassPath(packInConfig);
-                    packs.add(tp);
-                } catch (TemplatePackNotFoundException tpnfe) {
-                    // when working with multi maven projets with a single conf, the packs
-                    // are filtered out by simply not providing them on the classpath.
-                    // It is therefore ok to skip not found packs.
-                    log.warn(tpnfe.getMessage());
-                }
-                continue;
-            }
-
-            log.warn("Found an invalid pack declaration: " + packInConfig);
         }
     }
 
-    // ---------------------------------------------------
-    // PACK LOADING (classpath)
-    // ---------------------------------------------------
-//
-//    private void addLocalProject(List<TemplatePack> packs) {
-//        String localCelerioTemplate = WellKnownFolder.CELERIO_LOCAL_TEMPLATE.getFolder();
-//        if (!new File(config.getBaseDir() + File.separatorChar + localCelerioTemplate).exists()) {
-//            return;
-//        }
-//        try {
-//
-//            packs.add(new LocalResourcePackFile(new TemplatePackInfo("celerioLocal"), new File(config.getBaseDir() + File.separatorChar + localCelerioTemplate)));
-//        } catch (IOException ioe) {
-//            log.error("Could not load the default local pack", ioe);
-//        }
-//    }
+    private void addLocalPack(List<TemplatePack> packs, Pack pack) {
+        File packRoot = new File(config.getBaseDir() + File.separatorChar + pack.getPath());
+        if (!packRoot.exists()) {
+            log.warn("The packPath " + pack.getPath() + " for the pack " + pack.getName() + " does not exist!");
+            return;
+        }
+        File celerioPackXml = new File(packRoot, LOCAL_CELERIO_PACK);
+        if (!celerioPackXml.exists()) {
+            log.error("Skipping pack " + pack + " because " + celerioPackXml.getAbsolutePath() + " is missing");
+            return;
+        }
+
+        try {
+            CelerioPack celerioPack = celerioPackConfigLoader.load(celerioPackXml);
+            TemplatePackInfo packInfo = new TemplatePackInfo(celerioPack);
+            packInfo.overrideProperties(pack.getProperties());
+            File templates = new File(packRoot, "celerio" + File.separatorChar + celerioPack.getPackName().getValue());
+            packs.add(new LocalResourcePackFile(packInfo, templates));
+        } catch (IOException e) {
+            log.error("Could not load the pack " + pack, e);
+        }
+    }
+
+    private void addClasspathPack(List<TemplatePack> packs, Pack pack) {
+        try {
+            packs.add(getPackFromClassPath(pack));
+        } catch (TemplatePackNotFoundException e) {
+            // Maven modules can share configuration and include different packs on their classpaths.
+            log.warn(e.getMessage());
+        }
+    }
 
     private List<TemplatePack> getAllTemplatePacksFromClasspath() {
-        List<TemplatePack> result = newArrayList();
-        result.addAll(uncryptedPackLoader.getPacks());
-        return result;
+        return uncryptedPackLoader.getPacks();
     }
 
     private TemplatePack getPackFromClassPath(Pack packFromUserConfig) {

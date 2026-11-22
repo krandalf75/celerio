@@ -23,7 +23,7 @@ import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Sets.newTreeSet;
 
 public class AnnotationBuilder {
-    private Set<String> annotations = newTreeSet();
+    private final Set<String> annotations = newTreeSet();
     private boolean commentMode;
 
     public AnnotationBuilder(String... annotations) {

@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.*;
 import java.util.HashMap;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static com.google.common.collect.Maps.newHashMap;
 import static com.jaxio.celerio.convention.WellKnownFolder.JAVA;
 import static com.jaxio.celerio.convention.WellKnownFolder.JAVA_TEST;
@@ -32,10 +33,10 @@ import static org.apache.commons.io.IOUtils.*;
 
 @Slf4j
 public class FolderOutputResult implements OutputResult {
-    private FileTracker fileTracker;
-    private SourceFile userSource;
-    private SourceFile generatedSource;
-    private boolean sameDirectory;
+    private final FileTracker fileTracker;
+    private final SourceFile userSource;
+    private final SourceFile generatedSource;
+    private final boolean sameDirectory;
 
     private boolean isOpen = false;
     private boolean fileMetaDataSavedOk;
@@ -69,6 +70,7 @@ public class FolderOutputResult implements OutputResult {
         // been manually modified... So with this hook, hopefully we record
         // on disk whatever was generated before the interruption.
         Runtime.getRuntime().addShutdownHook(new Thread() {
+            @Override
             public void run() {
                 if (isFileTrackingEnabled() && !fileMetaDataSavedOk) {
                     try {
@@ -91,7 +93,7 @@ public class FolderOutputResult implements OutputResult {
         isOpen = true;
     }
 
-    synchronized public void close() throws IOException {
+    public synchronized void close() throws IOException {
         if (isOpen) {
             isOpen = false;
             saveFileMetaData();
@@ -144,7 +146,7 @@ public class FolderOutputResult implements OutputResult {
 
     @Override
     public void addContent(InputStream contentStream, String targetFilename, TemplatePack pack, Template template) throws IOException {
-        addContent(toByteArray(new InputStreamReader(contentStream), "UTF-8"), targetFilename, pack, template);
+        addContent(toByteArray(new InputStreamReader(contentStream), UTF_8.name()), targetFilename, pack, template);
     }
 
     @Override

@@ -31,15 +31,19 @@ import static com.jaxio.celerio.configuration.Util.CLASSPATH_CELERIO_PACK;
 
 @Service
 public class ClasspathTemplatePackInfoLoader {
+    private final CelerioPackConfigLoader celerioPackConfigLoader;
+
     @Autowired
-    private CelerioPackConfigLoader celerioPackConfigLoader;
+    public ClasspathTemplatePackInfoLoader(CelerioPackConfigLoader celerioPackConfigLoader) {
+        this.celerioPackConfigLoader = celerioPackConfigLoader;
+    }
 
     public List<TemplatePackInfo> resolveTopLevelPacks() {
         List<TemplatePackInfo> packInfos = newArrayList();
         PathMatchingResourcePatternResolver o = new PathMatchingResourcePatternResolver();
 
         try {
-            Resource packInfosAsResource[] = o.getResources(CLASSPATH_CELERIO_PACK);
+            Resource[] packInfosAsResource = o.getResources(CLASSPATH_CELERIO_PACK);
             for (Resource r : packInfosAsResource) {
                 CelerioPack celerioPack = celerioPackConfigLoader.load(r.getInputStream());
                 packInfos.add(new TemplatePackInfo(celerioPack));

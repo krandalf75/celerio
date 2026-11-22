@@ -26,7 +26,7 @@ import static com.jaxio.celerio.configuration.Util.firstNonNull;
 import static com.jaxio.celerio.util.PackageUtil.assemblePackage;
 
 public class ClassNamer extends AbstractNamer {
-    private Entity entity;
+    private final Entity entity;
     @Getter
     private ClassType classType;
     String type;

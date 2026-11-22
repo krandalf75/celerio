@@ -34,8 +34,7 @@ public abstract class MysqlExtension implements Extension {
 
     protected JdbcTemplate getJdbcTemplate(Connection connection) {
         DataSource dataSource = new SingleConnectionDataSource(connection, true);
-        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
-        return jdbcTemplate;
+        return new JdbcTemplate(dataSource);
     }
 
 }

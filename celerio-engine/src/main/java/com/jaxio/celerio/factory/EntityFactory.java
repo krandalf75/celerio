@@ -17,6 +17,7 @@
 package com.jaxio.celerio.factory;
 
 import com.jaxio.celerio.Config;
+import com.jaxio.celerio.configuration.Celerio;
 import com.jaxio.celerio.configuration.CelerioTemplateContext;
 import com.jaxio.celerio.configuration.Configuration;
 import com.jaxio.celerio.configuration.EntityContextProperty;
@@ -27,35 +28,117 @@ import com.jaxio.celerio.configuration.entity.ColumnConfig;
 import com.jaxio.celerio.configuration.entity.EntityConfig;
 import com.jaxio.celerio.model.Attribute;
 import com.jaxio.celerio.model.Entity;
+import com.jaxio.celerio.model.Project;
 import com.jaxio.celerio.model.support.ClassNamer2;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import static javax.persistence.InheritanceType.*;
 
 @Service
+@Slf4j
 public class EntityFactory {
 
-    @Autowired
-    private Config config;
+    private static final String WEB_DOMAIN_PACKAGE = "web.domain";
+
+    private final Config config;
+
+    private final ApplicationContext applicationContext;
+
+    private final EntityConfigFactory entityConfigFactory;
+
+    private final ColumnConfigFactory columnConfigFactory;
+
+    private final AttributeFactory attributeFactory;
 
     @Autowired
-    private ApplicationContext applicationContext;
-
-    @Autowired
-    private EntityConfigFactory entityConfigFactory;
-
-    @Autowired
-    private ColumnConfigFactory columnConfigFactory;
-
-    @Autowired
-    private AttributeFactory attributeFactory;
+    public EntityFactory(Config config,
+                         ApplicationContext applicationContext,
+                         EntityConfigFactory entityConfigFactory,
+                         ColumnConfigFactory columnConfigFactory,
+                         AttributeFactory attributeFactory) {
+        this.config = config;
+        this.applicationContext = applicationContext;
+        this.entityConfigFactory = entityConfigFactory;
+        this.columnConfigFactory = columnConfigFactory;
+        this.attributeFactory = attributeFactory;
+    }
 
     // -------------------------------------------
     // Public service
     // -------------------------------------------
+
+    void prepareConfiguredEntities(Celerio celerio) {
+        celerio.setEntityConfigs(entityConfigFactory.filterEntityConfigs(celerio.getEntityConfigs()));
+        log.info("Checking configuration consistency...");
+        entityConfigFactory.assertEntityConfigListIsConsistent(celerio.getEntityConfigs());
+    }
+
+    void buildEntities(Project project, List<EntityConfig> entityConfigs) {
+        Set<String> tablesProcessed = new HashSet<String>();
+        addEntitiesDefinedInUserConfiguration(project, entityConfigs, tablesProcessed);
+        addRemainingEntities(project, tablesProcessed);
+    }
+
+    private void addRemainingEntities(Project project, Set<String> tableProcessed) {
+        for (Table table : config.getMetadata().getTables()) {
+            // Make sure we do not process tables twice
+            if (tableProcessed.contains(table.getName().toUpperCase())) {
+                // skip default entity creation
+                continue;
+            }
+
+            addDefaultEntity(project, table, tableProcessed);
+        }
+    }
+
+    private void addDefaultEntity(Project project, Table table, Set<String> tableProcessed) {
+        if (!config.getCelerio().getConfiguration().hasTable(table.getName())) {
+            log.info("Skipping table '" + table.getName() + "'. Reason: excluded in configuration");
+            return;
+        }
+        EntityConfig entityConfig = entityConfigFactory.buildEntityConfig(table);
+        if (project.hasEntityByName(entityConfig.getEntityName())) {
+            log.warn("Skip default entity creation for table name=" + table.getName() + " entity name=" + entityConfig.getEntityName()
+                    + " as it was already registered!");
+            return;
+        }
+        Entity entity = buildEntity(entityConfig);
+        log.info("Adding entity " + entity.getName());
+        project.addEntity(entity);
+        project.putEntity(entity);
+        tableProcessed.add(table.getName().toUpperCase());
+    }
+
+    private void addEntitiesDefinedInUserConfiguration(Project project, List<EntityConfig> entityConfigs, Set<String> tableProcessed) {
+        for (EntityConfig entityConfig : entityConfigs) {
+            if (entityConfig.hasTableName() && !config.getCelerio().getConfiguration().hasTable(entityConfig.getTableName())) {
+                log.info("Skipping table '" + entityConfig.getTableName() + "'. Reason: excluded in configuration");
+                continue;
+            }
+
+            entityConfigFactory.applyFallBacks(entityConfig);
+            Entity entity = buildEntity(entityConfig);
+            log.info("Adding entity " + entity.getName());
+            project.addEntity(entity);
+
+            if (!entity.hasInheritance()) {
+                project.putEntity(entity);
+            }
+
+            // note: we may add a table twice, this is OK, this code is just here to
+            // avoid processing tables not present in the conf
+            // please check addRemainingEntities
+            tableProcessed.add(entity.getTableName().toUpperCase());
+        }
+    }
 
     public Entity buildEntity(EntityConfig entityConfig) {
         Entity entity = applicationContext.getBean(Entity.class);
@@ -124,8 +207,7 @@ public class EntityFactory {
         // 1st phase: process all column and look for corresponding columnConfig
         for (Column column : table.getColumns()) {
             if (entity.hasParentEntityName() && pk.equalsIgnoreCase(column.getName())) {
-                // Assume PK has same name as in parent entity ==> we should not map it.
-                // TODO: more complex case where pk's name is different in child entity.
+                // A shared primary-key column is mapped by the parent entity.
                 continue;
             }
 
@@ -161,8 +243,7 @@ public class EntityFactory {
         // 1st phase: process all column and look for corresponding columnConfig
         for (Column column : table.getColumns()) {
             if (entity.hasParentEntityName() && pk.equalsIgnoreCase(column.getName())) {
-                // Assume PK has same name as in parent entity ==> we should not map it.
-                // TODO: more complex case where pk's name is different in child entity.
+                // A shared primary-key column is mapped by the parent entity.
                 continue;
             }
 
@@ -219,23 +300,25 @@ public class EntityFactory {
             }
 
             // skip same table (was processed in the 1st phase)
-            if (entity.getTableName().equalsIgnoreCase(cc.getTableName())) {
-                continue;
+            if (!entity.getTableName().equalsIgnoreCase(cc.getTableName())) {
+                addSecondaryTableAttribute(entityConfig, entity, cc);
             }
-
-            // 3d phase: process columnConfigs that belong to another table (jpa secondary table feature)
-            Table secondaryTable = entity.getConfig().getMetadata().getTableByName(cc.getTableName());
-            Assert.notNull(secondaryTable, "Could not find the table " + cc.getTableName() + ". Is it ignored? Has it been reversed?"
-                    + "Please review the columnConfig " + cc.getColumnName() + " in entity " + entityConfig.getEntityName());
-
-            Column secondaryColumn = secondaryTable.getColumnByName(cc.getColumnName());
-            Assert.notNull(secondaryColumn, "Could not find the column " + cc.getColumnName() + ". Is it ignored? Has it been reversed?"
-                    + "Please review the columnConfig " + cc.getColumnName() + " in entity " + entityConfig.getEntityName());
-
-            columnConfigFactory.applyFallBacks(cc, secondaryTable, secondaryColumn);
-            columnConfigFactory.buildEnum(entity, cc, secondaryColumn);
-            entity.addAttribute(attributeFactory.build(entity, cc));
         }
+    }
+
+    private void addSecondaryTableAttribute(EntityConfig entityConfig, Entity entity, ColumnConfig cc) {
+        // 3d phase: process columnConfigs that belong to another table (jpa secondary table feature)
+        Table secondaryTable = entity.getConfig().getMetadata().getTableByName(cc.getTableName());
+        Assert.notNull(secondaryTable, "Could not find the table " + cc.getTableName() + ". Is it ignored? Has it been reversed?"
+                + "Please review the columnConfig " + cc.getColumnName() + " in entity " + entityConfig.getEntityName());
+
+        Column secondaryColumn = secondaryTable.getColumnByName(cc.getColumnName());
+        Assert.notNull(secondaryColumn, "Could not find the column " + cc.getColumnName() + ". Is it ignored? Has it been reversed?"
+                + "Please review the columnConfig " + cc.getColumnName() + " in entity " + entityConfig.getEntityName());
+
+        columnConfigFactory.applyFallBacks(cc, secondaryTable, secondaryColumn);
+        columnConfigFactory.buildEnum(entity, cc, secondaryColumn);
+        entity.addAttribute(attributeFactory.build(entity, cc));
     }
 
     /**
@@ -244,19 +327,19 @@ public class EntityFactory {
      * @param entity
      */
     private void namerDefault(Entity entity) {
-        entity.put("searchForm", new ClassNamer2(entity, null, "web.domain", null, "SearchForm"));
-        entity.put("editForm", new ClassNamer2(entity, null, "web.domain", null, "EditForm"));
-        entity.put("graphLoader", new ClassNamer2(entity, null, "web.domain", null, "GraphLoader"));
-        entity.put("controller", new ClassNamer2(entity, null, "web.domain", null, "Controller"));
-        entity.put("excelExporter", new ClassNamer2(entity, null, "web.domain", null, "ExcelExporter"));
-        entity.put("lazyDataModel", new ClassNamer2(entity, null, "web.domain", null, "LazyDataModel"));
-        entity.put("fileUpload", new ClassNamer2(entity, null, "web.domain", null, "FileUpload"));
-        entity.put("fileDownload", new ClassNamer2(entity, null, "web.domain", null, "FileDownload"));
+        entity.put("searchForm", new ClassNamer2(entity, null, WEB_DOMAIN_PACKAGE, null, "SearchForm"));
+        entity.put("editForm", new ClassNamer2(entity, null, WEB_DOMAIN_PACKAGE, null, "EditForm"));
+        entity.put("graphLoader", new ClassNamer2(entity, null, WEB_DOMAIN_PACKAGE, null, "GraphLoader"));
+        entity.put("controller", new ClassNamer2(entity, null, WEB_DOMAIN_PACKAGE, null, "Controller"));
+        entity.put("excelExporter", new ClassNamer2(entity, null, WEB_DOMAIN_PACKAGE, null, "ExcelExporter"));
+        entity.put("lazyDataModel", new ClassNamer2(entity, null, WEB_DOMAIN_PACKAGE, null, "LazyDataModel"));
+        entity.put("fileUpload", new ClassNamer2(entity, null, WEB_DOMAIN_PACKAGE, null, "FileUpload"));
+        entity.put("fileDownload", new ClassNamer2(entity, null, WEB_DOMAIN_PACKAGE, null, "FileDownload"));
     }
 
     private void namerExtension(Entity entity, Configuration configuration) {
         CelerioTemplateContext celerioContext = configuration.getCelerioTemplateContext();
-        if (celerioContext == null || celerioContext.getEntityContextProperties() == null || celerioContext.getEntityContextProperties().size() == 0) {
+        if (celerioContext == null || celerioContext.getEntityContextProperties() == null || celerioContext.getEntityContextProperties().isEmpty()) {
             return;
         }
 
