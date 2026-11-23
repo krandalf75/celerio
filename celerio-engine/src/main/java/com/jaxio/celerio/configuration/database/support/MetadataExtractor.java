@@ -336,7 +336,10 @@ public class MetadataExtractor {
 
         log.info("Working with " + tableNamePatterns.size() +  " table name pattern(s)");
 
-        String[] tableTypes = getTableTypesAsStringArray(configuration.getTableTypes());
+        String jdbcReverseTypes = configuration.getJdbcReverseTypes();
+        String[] tableTypes = jdbcReverseTypes == null || jdbcReverseTypes.isBlank()
+                ? getTableTypesAsStringArray(configuration.getTableTypes())
+                : jdbcReverseTypes.split(",");
         String tableTypeNames = String.join(",", tableTypes);
         for (String tableNamePattern : tableNamePatterns) {
             if (log.isInfoEnabled()) {
@@ -364,12 +367,22 @@ public class MetadataExtractor {
         table.setCatalog(getString(row, "TABLE_CAT"));
         table.setSchemaName(getString(row, "TABLE_SCHEM"));
         table.setName(getString(row, "TABLE_NAME"));
-        table.setType(TableType.valueOf(getString(row, "TABLE_TYPE")));
+        table.setType(resolveTableType(getString(row, "TABLE_TYPE")));
         String remarks = getString(row, "REMARKS");
         if (notEmpty(remarks)) {
             table.setRemarks(remarks);
         }
         return table;
+    }
+
+    static TableType resolveTableType(String tableType) {
+        if ("MATERIALIZED VIEW".equalsIgnoreCase(tableType)) {
+            return TableType.VIEW;
+        }
+        if ("PARTITIONED TABLE".equalsIgnoreCase(tableType)) {
+            return TableType.TABLE;
+        }
+        return TableType.valueOf(tableType);
     }
 
     private String[] getTableTypesAsStringArray(List<TableType> tableTypes) {
