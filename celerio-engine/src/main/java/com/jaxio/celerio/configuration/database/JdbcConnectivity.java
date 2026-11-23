@@ -16,6 +16,7 @@
 
 package com.jaxio.celerio.configuration.database;
 
+import lombok.Getter;
 import lombok.Setter;
 
 import java.util.List;
@@ -59,6 +60,10 @@ public class JdbcConnectivity {
     @Setter
     private String catalog;
     private List<TableType> tableTypes = newArrayList();
+
+    @Getter
+    @Setter
+    private String jdbcReverseTypes;
 
     public JdbcConnectivity() {
     }
