@@ -133,6 +133,12 @@ public class DbMetadataMojo extends AbstractMojo {
     protected boolean jdbcReverseViews;
 
     /**
+     * Comma-separated JDBC table types to reverse, overriding the default table and view filters.
+     */
+    @Parameter(property = "jdbc.reverseTypes")
+    protected String jdbcReverseTypes;
+
+    /**
      * Specify the JDBC schema.
      */
     @Parameter(property = "jdbc.schema")
@@ -231,6 +237,7 @@ public class DbMetadataMojo extends AbstractMojo {
             getLog().info("Reverse VIEWS is enabled");
             jdbcConnectivity.add(TableType.VIEW);
         }
+        jdbcConnectivity.setJdbcReverseTypes(jdbcReverseTypes);
 
         if (jdbcConnectivity.invalid()) {
             displayMissingMetadataConfiguration(jdbcConnectivity);
