@@ -17,7 +17,9 @@
 package com.jaxio.celerio.maven.plugin.celerio;
 
 import com.jaxio.celerio.Config;
+import com.jaxio.celerio.model.support.jpa.TemporalMapping;
 import com.jaxio.celerio.template.ImportsContext;
+import com.jaxio.celerio.template.TemporalMappingContext;
 import com.jaxio.celerio.configuration.*;
 import com.jaxio.celerio.configuration.database.JdbcConnectivity;
 import com.jaxio.celerio.configuration.database.Metadata;
@@ -117,6 +119,10 @@ public class GenerateMojo extends AbstractMojo {
     @Parameter(property = "celerio-maven-plugin.jakartaNamespace", defaultValue = "false")
     protected boolean jakartaNamespace;
 
+    /** Select the temporal mapping strategy for generated entities. */
+    @Parameter(property = "celerio-maven-plugin.temporalMapping", defaultValue = "legacy")
+    protected String temporalMapping;
+
     /**
      * Specify the JDBC driver.
      * <p>
@@ -209,6 +215,7 @@ public class GenerateMojo extends AbstractMojo {
             return;
         }
 
+        TemporalMapping selectedTemporalMapping = resolveTemporalMapping();
         context = new ClassPathXmlApplicationContext("classpath:applicationContext-celerio.xml");
         CelerioProducer producer = context.getBean(CelerioProducer.class);
         Config config = setupConfig(producer.getConfig(), xmlMetadata, xmlConfiguration, baseDir, outputDirectory);
@@ -216,11 +223,27 @@ public class GenerateMojo extends AbstractMojo {
         exitIfConfigurationMissing(config);
         exitIfNoPackDefined(producer.getPackLoader());
         ImportsContext.setJakartaNamespace(jakartaNamespace);
+        TemporalMappingContext.setTemporalMapping(selectedTemporalMapping);
         try {
             producer.produce();
         } finally {
+            TemporalMappingContext.clear();
             ImportsContext.setJakartaNamespace(false);
         }
+    }
+
+    TemporalMapping resolveTemporalMapping() throws MojoExecutionException {
+        TemporalMapping selectedTemporalMapping;
+        try {
+            selectedTemporalMapping = TemporalMapping.fromValue(temporalMapping);
+        } catch (IllegalArgumentException e) {
+            throw new MojoExecutionException(e.getMessage(), e);
+        }
+
+        if (selectedTemporalMapping == TemporalMapping.HIBERNATE7 && !jakartaNamespace) {
+            throw new MojoExecutionException("temporalMapping=hibernate7 requires jakartaNamespace=true.");
+        }
+        return selectedTemporalMapping;
     }
 
     private void exitIfConfigurationMissing(Config config) throws MojoExecutionException {

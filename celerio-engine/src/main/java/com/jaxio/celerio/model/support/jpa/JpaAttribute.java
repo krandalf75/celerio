@@ -23,6 +23,7 @@ import com.jaxio.celerio.configuration.entity.GeneratedValue;
 import com.jaxio.celerio.configuration.entity.GenericGenerator;
 import com.jaxio.celerio.model.Attribute;
 import com.jaxio.celerio.spi.support.AbstractAttributeSpi;
+import com.jaxio.celerio.template.TemporalMappingContext;
 import com.jaxio.celerio.util.AnnotationBuilder;
 import com.jaxio.celerio.util.AttributeBuilder;
 import org.springframework.util.Assert;
@@ -183,6 +184,10 @@ public class JpaAttribute extends AbstractAttributeSpi {
     }
 
     public String getTemporalAnnotation() {
+        if (TemporalMappingContext.getTemporalMapping() == TemporalMapping.HIBERNATE7) {
+            return getHibernate7TemporalAnnotation();
+        }
+
         if (attribute.isJavaUtilOnlyDate()) {
             addImport(TEMPORAL_ANNOTATION);
             addImport("static javax.persistence.TemporalType.DATE");
@@ -202,6 +207,24 @@ public class JpaAttribute extends AbstractAttributeSpi {
         }
 
         return "";
+    }
+
+    private String getHibernate7TemporalAnnotation() {
+        if (attribute.isJavaUtilOnlyDate()) {
+            return getJdbcTypeCodeAnnotation("DATE");
+        }
+
+        if (attribute.isJavaUtilOnlyTime()) {
+            return getJdbcTypeCodeAnnotation("TIME");
+        }
+
+        return "";
+    }
+
+    private String getJdbcTypeCodeAnnotation(String sqlType) {
+        addImport("org.hibernate.annotations.JdbcTypeCode");
+        addImport("org.hibernate.type.SqlTypes");
+        return "@JdbcTypeCode(SqlTypes." + sqlType + ")";
     }
 
     public String getColumnAnnotation() {
