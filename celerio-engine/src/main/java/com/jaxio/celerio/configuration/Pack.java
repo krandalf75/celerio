@@ -20,7 +20,7 @@ import lombok.Setter;
 import lombok.ToString;
 import org.springframework.util.Assert;
 
-import javax.xml.bind.annotation.XmlAttribute;
+import jakarta.xml.bind.annotation.XmlAttribute;
 
 import java.util.List;
 
@@ -47,7 +47,7 @@ public class Pack {
     }
 
     public Pack(String name) {
-        Assert.isTrue(!name.endsWith(".pack"));
+        Assert.isTrue(!name.endsWith(".pack"), "Pack name must not include the .pack suffix");
         this.name = name;
     }
 

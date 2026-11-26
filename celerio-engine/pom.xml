@@ -48,7 +48,6 @@
         <dependency>
             <groupId>org.eclipse.jgit</groupId>
             <artifactId>org.eclipse.jgit</artifactId>
-            <version>4.5.0.201609210915-r</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -69,7 +68,7 @@
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
+            <artifactId>slf4j-simple</artifactId>
         </dependency>
         <dependency>
             <groupId>org.jibx</groupId>
@@ -191,7 +190,7 @@
         <!-- tools -->
         <dependency>
             <groupId>org.apache.velocity</groupId>
-            <artifactId>velocity</artifactId>
+            <artifactId>velocity-engine-core</artifactId>
             <exclusions>
                 <exclusion>
                     <groupId>oro</groupId>
@@ -387,9 +386,9 @@ relase.by=${user.name}]]></echo>
                         </executions>
                         <dependencies>
                             <dependency>
-                                <groupId>log4j</groupId>
-                                <artifactId>log4j</artifactId>
-                                <version>1.2.13</version>
+                                <groupId>ch.qos.reload4j</groupId>
+                                <artifactId>reload4j</artifactId>
+                                <version>1.2.25</version>
                             </dependency>
                             <dependency>
                                 <groupId>org.jibx</groupId>

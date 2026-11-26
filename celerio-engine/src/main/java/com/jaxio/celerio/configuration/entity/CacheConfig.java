@@ -18,7 +18,7 @@ package com.jaxio.celerio.configuration.entity;
 
 import lombok.Setter;
 
-import javax.xml.bind.annotation.XmlAttribute;
+import jakarta.xml.bind.annotation.XmlAttribute;
 
 import static org.springframework.util.StringUtils.hasLength;
 

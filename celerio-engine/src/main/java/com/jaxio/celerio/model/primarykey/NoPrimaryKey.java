@@ -34,7 +34,7 @@ public class NoPrimaryKey implements PrimaryKey {
 
     @SuppressWarnings("java:S6832") // The model creates this helper directly for each entity or attribute.
     public NoPrimaryKey(Entity entity) {
-        Assert.notNull(entity);
+        Assert.notNull(entity, "Entity must not be null");
         this.entity = entity;
     }
 

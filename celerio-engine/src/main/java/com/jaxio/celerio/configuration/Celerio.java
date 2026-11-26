@@ -19,9 +19,9 @@ package com.jaxio.celerio.configuration;
 import com.jaxio.celerio.configuration.entity.EntityConfig;
 import com.jaxio.celerio.configuration.entity.EnumConfig;
 
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlElementWrapper;
-import javax.xml.bind.annotation.XmlRootElement;
+import jakarta.xml.bind.annotation.XmlElement;
+import jakarta.xml.bind.annotation.XmlElementWrapper;
+import jakarta.xml.bind.annotation.XmlRootElement;
 
 import java.util.List;
 

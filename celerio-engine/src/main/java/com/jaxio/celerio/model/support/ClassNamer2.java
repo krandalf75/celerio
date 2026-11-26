@@ -38,7 +38,7 @@ public class ClassNamer2 extends AbstractNamer {
     private final String packageName;
 
     public ClassNamer2(Entity entity, String rootPackage, String subPackage, String prefix, String suffix) {
-        Assert.notNull(entity);
+        Assert.notNull(entity, "Entity must not be null");
         prefix = isBlank(prefix) ? "" : prefix;
         suffix = isBlank(suffix) ? "" : suffix;
         this.type = buildType(prefix, entity.getName(), suffix);
