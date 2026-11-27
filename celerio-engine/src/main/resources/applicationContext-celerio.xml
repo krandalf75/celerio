@@ -65,14 +65,19 @@
     </bean>
 
 
-    <bean class="org.apache.velocity.app.VelocityEngine" init-method="init">
+    <bean class="org.springframework.ui.velocity.VelocityEngineFactoryBean">
         <description>
-            Load templates from the filesystem and fall back to the classpath.
+            See
+            http://velocity.apache.org/engine/releases/velocity-1.6.2/developer-guide.html#Configuring_Resource_Loaders
+            Load from file then fallback to classpath
         </description>
         <property name="velocityProperties">
             <props>
                 <prop key="runtime.references.strict">true</prop>
                 <prop key="runtime.log.invalid.references">true</prop>
+
+                <prop key="runtime.log.logsystem.class">org.apache.velocity.runtime.log.Log4JLogChute</prop>
+                <prop key="runtime.log.logsystem.log4j.logger">com.jaxio.celerio.VelocityGenerator</prop>
 
                 <prop key="resource.loader">file, class</prop>
 

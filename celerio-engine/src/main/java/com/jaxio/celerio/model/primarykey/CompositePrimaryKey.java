@@ -34,7 +34,7 @@ public class CompositePrimaryKey extends ClassNamer implements PrimaryKey {
     private final List<Attribute> attributes;
 
     public CompositePrimaryKey(Entity entity, List<Attribute> attributes) {
-        Assert.notNull(entity, "Entity must not be null");
+        Assert.notNull(entity);
         Assert.isTrue(attributes.size() > 1, "Composite PK must have at least 2 attributes");
         super(entity, ClassType.primaryKey);
         for (Attribute attribute : attributes) {

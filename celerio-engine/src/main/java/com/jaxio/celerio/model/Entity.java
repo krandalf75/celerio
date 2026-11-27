@@ -262,7 +262,7 @@ public class Entity implements Hierarchical<Entity>, Named, Map<String, Object> 
 
     public void setEntityConfig(EntityConfig config) {
         Assert.isNull(this.entityConfig, "entityConfig can be set only once");
-        Assert.notNull(config, "Entity configuration must not be null");
+        Assert.notNull(config);
         this.entityConfig = config;
     }
 
@@ -738,7 +738,7 @@ public class Entity implements Hierarchical<Entity>, Named, Map<String, Object> 
     }
 
     public boolean is(InheritanceType strategy) {
-        Assert.notNull(strategy, "Inheritance strategy must not be null");
+        Assert.notNull(strategy);
         if (getInheritance() == null) {
             return false;
         }

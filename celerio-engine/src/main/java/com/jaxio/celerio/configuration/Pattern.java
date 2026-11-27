@@ -19,8 +19,8 @@ package com.jaxio.celerio.configuration;
 import lombok.Setter;
 import org.springframework.util.AntPathMatcher;
 
-import jakarta.xml.bind.annotation.XmlAttribute;
-import jakarta.xml.bind.annotation.XmlTransient;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlTransient;
 
 import java.io.File;
 import java.util.List;

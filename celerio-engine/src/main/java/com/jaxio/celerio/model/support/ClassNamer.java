@@ -32,8 +32,8 @@ public class ClassNamer extends AbstractNamer {
     String type;
 
     public ClassNamer(Entity entity, ClassType classType) {
-        Assert.notNull(entity, "Entity must not be null");
-        Assert.notNull(classType, "Class type must not be null");
+        Assert.notNull(entity);
+        Assert.notNull(classType);
 
         this.entity = entity;
         this.classType = classType;

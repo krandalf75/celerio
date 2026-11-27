@@ -114,7 +114,7 @@ public class JpaConfigHelper {
     // ------------------------------------------
 
     public static String jpaFetch(PackageImportAdder adder, FetchTypeGetter... fetchTypeGetters) {
-        Assert.notNull(adder, "Adder method must not be null");
+        Assert.notNull(adder);
 
         if (fetchTypeGetters == null) {
             return "";
@@ -140,7 +140,7 @@ public class JpaConfigHelper {
     // ------------------------------------------
 
     public static String orderByAnnotation(PackageImportAdder adder, OrderByGetter... orderByGetters) {
-        Assert.notNull(adder, "Adder method must not be null");
+        Assert.notNull(adder);
 
         if (orderByGetters == null) {
             return null;

@@ -218,23 +218,23 @@ public class JpaToOneRelation extends AbstractRelationSpi {
     // ----------------------------------------
 
     private String getManyToOneCascade() {
-        Assert.isTrue(relation.isManyToOne(), "Relation must be many-to-one");
+        Assert.isTrue(relation.isManyToOne());
         return jpaCascade(this, //
                 relation.getFromAttribute().getColumnConfig().getManyToOneConfig(), //
                 relation.getFromEntity().getConfig().getCelerio().getConfiguration().getDefaultManyToOneConfig());
     }
 
     private String getOneToOneCascade() {
-        Assert.isTrue(relation.isOneToOne(), "Relation must be one-to-one");
-        Assert.isTrue(!relation.isInverse(), "Relation must not be inverse");
+        Assert.isTrue(relation.isOneToOne());
+        Assert.isTrue(!relation.isInverse());
         return jpaCascade(this, //
                 relation.getFromAttribute().getColumnConfig().getOneToOneConfig(), //
                 relation.getFromEntity().getConfig().getCelerio().getConfiguration().getDefaultOneToOneConfig());
     }
 
     private String getInverseOneToOneCascade() {
-        Assert.isTrue(relation.isOneToOne(), "Relation must be one-to-one");
-        Assert.isTrue(relation.isInverse(), "Relation must be inverse");
+        Assert.isTrue(relation.isOneToOne());
+        Assert.isTrue(relation.isInverse());
         return jpaCascade(this, //
                 relation.getInverse().getFromAttribute().getColumnConfig().getInverseOneToOneConfig(), //
                 relation.getFromEntity().getConfig().getCelerio().getConfiguration().getDefaultInverseOneToOneConfig());
@@ -245,22 +245,22 @@ public class JpaToOneRelation extends AbstractRelationSpi {
     // ----------------------------------------
 
     private String getManyToOneFetch() {
-        Assert.isTrue(relation.isManyToOne(), "Relation must be many-to-one");
+        Assert.isTrue(relation.isManyToOne());
         return jpaFetch(this, relation.getFromAttribute().getColumnConfig().getManyToOneConfig(), //
                 relation.getFromEntity().getConfig().getCelerio().getConfiguration().getDefaultManyToOneConfig());
     }
 
     private String getOneToOneFetch() {
-        Assert.isTrue(relation.isOneToOne(), "Relation must be one-to-one");
-        Assert.isTrue(!relation.isInverse(), "Relation must not be inverse");
+        Assert.isTrue(relation.isOneToOne());
+        Assert.isTrue(!relation.isInverse());
         return jpaFetch(this, //
                 relation.getFromAttribute().getColumnConfig().getOneToOneConfig(), //
                 relation.getFromEntity().getConfig().getCelerio().getConfiguration().getDefaultOneToOneConfig());
     }
 
     private String getInverseOneToOneFetch() {
-        Assert.isTrue(relation.isOneToOne(), "Relation must be one-to-one");
-        Assert.isTrue(relation.isInverse(), "Relation must be inverse");
+        Assert.isTrue(relation.isOneToOne());
+        Assert.isTrue(relation.isInverse());
         return jpaFetch(this, //
                 relation.getFromAttribute().getColumnConfig().getInverseOneToOneConfig(), //
                 relation.getFromEntity().getConfig().getCelerio().getConfiguration().getDefaultInverseOneToOneConfig());

@@ -40,6 +40,7 @@ import static java.util.regex.Pattern.*;
 import static org.apache.commons.io.FilenameUtils.normalize;
 import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.apache.commons.lang.StringUtils.substringBeforeLast;
+import static org.apache.velocity.util.StringUtils.normalizePath;
 
 // -----------
 // IMPLEMENTATION NOTE: 
@@ -191,7 +192,7 @@ public class PreviousEngine {
     }
 
     private void moveSupersededJavaFile(String userDomainPath, String generatedDomainPath, String generatedFilename, boolean generatedMetamodel) {
-        boolean sameSubPath = normalize(userDomainPath).equals(normalize(generatedDomainPath));
+        boolean sameSubPath = normalizePath(userDomainPath).equals(normalizePath(generatedDomainPath));
         boolean sameDirectory = outputResult.sameDirectory();
         boolean preserveFile = generatedMetamodel || (sameDirectory ? sameSubPath : !ImportsContext.isExtendedByUser());
         if (!preserveFile && generatedSource.fileExists(generatedFilename)) {
